@@ -1,6 +1,6 @@
 """Integrates sensor signals & outputs signals asynchronously."""
 
-import argparse, asyncio, json, os, time, traceback
+import asyncio, json, os, time, traceback
 
 from . import util
 
@@ -46,6 +46,8 @@ class Integrator:
         Args (non exhaustive):
           fps : At what frequency `compute()` should be called. Can be set to
               zero in which case `self.event.set()` triggers the computation.
+              If set to another value then zero then every call to
+              `self.event.set()` will result in the fps timer being reset.
         """
         self.logger = logger
         self.fps = fps
@@ -100,19 +102,20 @@ class Integrator:
         self.transports.append(transport)
 
     async def sending_loop(self):
-        t0 = time.time()
+        self.t = time.time()
         try:
             while self.running:
                 if self.fps:
-                    dt = 1 / fps - (time.time() - t0)
-                    await asyncio.sleep(max(0, dt))
+                    dt = 1 / self.fps - (time.time() - self.t)
+                    try:
+                        await asyncio.wait_for(self.event.wait(), max(0, dt))
+                    except asyncio.TimeoutError:
+                        pass
                 else:
                     await self.event.wait()
                     self.event.clear()
-                t0 = time.time()
-                self.t = t0
+                self.t = time.time()
                 signals = self.compute()
-                signals['t'] = t0
                 for transport in self.transports:
                     if transport.is_closing():
                         self.logger.info('transport closing')
@@ -160,4 +163,3 @@ class Integrator:
             self.logger.info('done')
             loop.close()
             self.loop = None
-
