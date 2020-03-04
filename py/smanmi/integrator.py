@@ -113,7 +113,7 @@ class Integrator:
                         pass
                 else:
                     await self.event.wait()
-                    self.event.clear()
+                self.event.clear()
                 self.t = time.time()
                 signals = self.compute()
                 for transport in self.transports:
