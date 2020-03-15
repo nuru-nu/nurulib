@@ -26,7 +26,7 @@ export const Monitor = (output) => {
   }
   let preset = presets.default
 
-  const states = ['frozen', 'std', 'std2', 'std3', 'ooo', 'flash', 'test']
+  const states = ['frozen', 'std', 'std2', 'std3', 'ooo', 'flash', 'test', 'color']
   let overrides = {}
   const disp = h.div().of(
     h.select('logmel_src').of(

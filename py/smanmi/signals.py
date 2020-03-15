@@ -21,6 +21,21 @@ def init(settings_):
 class State(L.Signal):
     """Updates the state."""
 
+    COLORS = [
+        'brownish_palette',
+        'coolors_rainbow',
+        'just_greens',
+        'blue_purple',
+        'funny_rainbow',
+        'barbie',
+        'purple_haze',
+        'red_death',
+        'gabe_red',
+        'super_red',
+        'ultra_rainbows',
+        'earth_life',
+    ]
+
     def init(self, sonar_ooo=0.5):
         self.last_change = 0
 
@@ -29,26 +44,16 @@ class State(L.Signal):
         oldstate = state.state
         dt = t - self.last_change
         if newstate:
-            state.goto(newstate)
+            if newstate == 'color':
+                state.color = random.choice(self.COLORS)
+            else:
+                state.goto(newstate)
         elif state.state == 'test':
             pass
         elif not state.state.startswith('std') and sonar > self.sonar_ooo:
             state.goto(random.choice(['std', 'std2']))
             state.rnd = random.choice(range(10))
-            state.color = random.choice([
-                'brownish_palette',
-                'coolors_rainbow',
-                'just_greens',
-                'blue_purple',
-                'funny_rainbow',
-                'barbie',
-                'purple_haze',
-                'red_death',
-                'gabe_red',
-                'super_red',
-                'ultra_rainbows',
-                'earth_life',
-            ])
+            state.color = random.choice(self.COLORS)
         elif state.state == 'test':
             return state
         elif state.state.startswith('std') and sonar < self.sonar_ooo:
