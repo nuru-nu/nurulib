@@ -1,7 +1,5 @@
 """Signals transform sound to scalars."""
 
-import random
-
 # import aubio
 import numpy as np
 
@@ -18,53 +16,6 @@ def init(settings_):
 
 # state
 ###############################################################################
-
-
-class State(L.Signal):
-    """Updates the state."""
-
-    COLORS = [
-        'brownish_palette',
-        'coolors_rainbow',
-        'just_greens',
-        'blue_purple',
-        'funny_rainbow',
-        'barbie',
-        'purple_haze',
-        'red_death',
-        'gabe_red',
-        'super_red',
-        'ultra_rainbows',
-        'earth_life',
-    ]
-
-    def init(self):
-        self.last_change = 0
-
-    def call(self, t, state, into, ooo_intensity):
-        oldstate = state.state
-        dt = t - self.last_change
-        if state.state == 'test':
-            pass
-        elif not state.state.startswith('std') and not into:
-            state.goto(random.choice(['std', 'std2']))
-            state.rnd = random.choice(range(10))
-            state.color = random.choice(self.COLORS)
-        elif state.state == 'test':
-            return state
-        elif state.state.startswith('std') and into:
-            state.goto('into')
-        elif state.state == 'into' and dt > 2:
-            state.goto('ooo')
-        # elif state.state == 'ooo' and ooo_intensity == 1.0:
-        #     state.state = 'flash'
-        elif state.state == 'flash' and t - self.last_change > 10:
-            state.state = 'std'
-
-        if oldstate != state.state:
-            self.last_change = t
-        return state
-
 
 class Smoke(L.Signal):
 
