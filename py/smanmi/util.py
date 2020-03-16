@@ -38,8 +38,8 @@ class Colorize:
         return getattr(self.formatter, name)
 
 
-def createLogger(name, stderr=True, logfile=True, colored=True, debug=True):
-    """Also updates module `logger` to newly initialized logger."""
+def createLogger(name, stderr=True, logfile=True, colored=True, debug=True):  # noqa: N802, E501
+    """Also updates module's `logger` to newly initialized logger."""
     global logger
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
@@ -131,6 +131,19 @@ def pythonize(d):
     if isinstance(d, state.State):
         return str(d)
     return d
+
+
+def serialize(signals):
+    """Serializes `signals` to UTF8, also serializing "state" etc."""
+    return json.dumps(pythonize(signals)).encode('utf8')
+
+
+def deserialize(msg):
+    """Does the opposite of `serialize()`."""
+    signals = json.loads(msg.decode('utf8'))
+    if 'state' in signals:
+        signals['state'] = state.State(signals['state'])
+    return signals
 
 
 class Streamer:
@@ -229,6 +242,7 @@ def except_kill(func):
 def machine_name():
     return socket.gethostname()
 
+
 class Timetracer:
     """Traces time [ms] in text file."""
 
@@ -278,17 +292,18 @@ class StreamingStats:
         """Dumps stats to logger.info()."""
         dt = time.time() - self.t0
         for name in sorted(self.total):
-            self.logger.debug('stats[%s] : %.1f fps %.1f kps (sum %.1fM)',
-                              name, self.n[name]/dt, self.total[name]/dt/1e3,
-                              self.totaltotal[name]/1e6)
+            self.logger.debug(
+                'stats[%s] : %.1f fps %.1f kps (sum %.1fM)',
+                name, self.n[name] / dt, self.total[name] / dt / 1e3,
+                self.totaltotal[name] / 1e6)
 
     def dump_reset(self):
         self.dump()
         self.t0 = time.time()
         for name in self.n:
-          self.n[name] = self.total[name] = 0
+            self.n[name] = self.total[name] = 0
 
-    def __call__(self, name, s):
+    def __call__(self, name, s=None):
         """"Adds `s` to stats and calls dump() every 1/hz seconds."""
         if name not in self.n:
             self.n[name] = self.total[name] = self.totaltotal[name] = 0
