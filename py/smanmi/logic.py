@@ -19,7 +19,7 @@ Synoposis:
   print(values['a'])
 """
 
-import functools, inspect, random, time
+import functools, inspect, random
 
 # utils
 ###############################################################################
@@ -29,8 +29,19 @@ def rnd(minmax):
     return minmax[0] + random.random() * (
         minmax[1] - minmax[0])
 
+
+class MissingInputsException(Exception):
+    """Thrown if signal inputs cannot be satisfied."""
+    pass
+
+
 # Base classes
 ###############################################################################
+
+
+def is_signal(x):
+    # WTF ?! this fails with `return isinstance(x, Signal):`
+    return hasattr(x, 'call') or isinstance(x, SignalChain)
 
 
 class D:
@@ -90,9 +101,7 @@ class Signal:
             assert not hasattr(self, k), 'hasattr({}, {})'.format(
                 self.__class__.__name__, k)
             setattr(self, k, v)
-            if hasattr(v, 'call') or isinstance(v, SignalChain):
-            # WTF
-            # if isinstance(v, Signal):
+            if is_signal(v):
                 self.signalparams[k] = v
 
     def __or__(self, other):
@@ -104,6 +113,10 @@ class Signal:
     def __call__(self, **allkw):
         for k, v in self.signalparams.items():
             setattr(self, k, v(**allkw)['value'])
+        missing = set(self.wants).difference(allkw.keys())
+        if missing:
+            raise MissingInputsException(
+                f'Signal {self!r} is missing inputs {missing}')
         kw = {k: allkw[k] for k in self.wants}
         ret = self.call(**kw)
         if not isinstance(ret, dict):
@@ -212,12 +225,6 @@ class Named(Signal):
 # SignalRunner
 ###############################################################################
 
-
-class ConstraintException(Exception):
-    """Thrown by SignalRunner if DAG cannot be computed."""
-    pass
-
-
 def make_order(signals, provided):
     """Returns ordered keys of `signals` satisfying their wants."""
     ordered = []
@@ -230,7 +237,7 @@ def make_order(signals, provided):
             if len(provided.intersection(signal.wants)) == len(signal.wants):
                 done.add(name)
         if not done:
-            raise ConstraintException('could not satisfy ANY of {}'.format(
+            raise MissingInputsException('could not satisfy ANY of {}'.format(
                 ', '.join([
                     '{}->{}'.format(signals[name], signals[name].wants)
                     for name in names
@@ -266,15 +273,10 @@ class SignalRunner:
         self.overrides = {}
 
     def __call__(self, **kw):
-        """Note that signalin['override'] is treated specially."""
         missing = self.provided.difference(kw.keys())
         if missing:
-            raise ConstraintException(f'Missing provided : {missing}')
-        self.overrides = kw.get('signalin', {}).get('overrides', self.overrides)
+            raise MissingInputsException(f'Missing provided : {missing}')
         values = dict(**kw)
         for name in self.ordered:
-            if name in self.overrides:
-                values[name] = self.overrides[name]
-            else:
-                values[name] = self.signals[name](**values)['value']
+            values[name] = self.signals[name](**values)['value']
         return values

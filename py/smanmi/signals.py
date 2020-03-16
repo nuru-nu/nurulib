@@ -9,6 +9,8 @@ from . import logic as L, util
 
 
 settings = None
+
+
 def init(settings_):
     global settings
     settings = settings_
@@ -36,27 +38,21 @@ class State(L.Signal):
         'earth_life',
     ]
 
-    def init(self, sonar_ooo=0.5):
+    def init(self):
         self.last_change = 0
 
-    def call(self, t, state, signalin, sonar, ooo_intensity, into):
-        newstate = signalin.get('newstate')
+    def call(self, t, state, into, ooo_intensity):
         oldstate = state.state
         dt = t - self.last_change
-        if newstate:
-            if newstate == 'color':
-                state.color = random.choice(self.COLORS)
-            else:
-                state.goto(newstate)
-        elif state.state == 'test':
+        if state.state == 'test':
             pass
-        elif not state.state.startswith('std') and sonar > self.sonar_ooo:
+        elif not state.state.startswith('std') and not into:
             state.goto(random.choice(['std', 'std2']))
             state.rnd = random.choice(range(10))
             state.color = random.choice(self.COLORS)
         elif state.state == 'test':
             return state
-        elif state.state.startswith('std') and sonar < self.sonar_ooo:
+        elif state.state.startswith('std') and into:
             state.goto('into')
         elif state.state == 'into' and dt > 2:
             state.goto('ooo')
@@ -158,49 +154,17 @@ class RndRamp(L.Signal):
         return 1 - (t - self.t2) / (self.t3 - self.t2)
 
 
-class SignalIn(L.Signal):
-    """Retrieves from signalin by name, using last value."""
+class Into(L.Signal):
+    """Turns on when head presence is detected by sonar."""
 
-    def init(self, name, min_value=0, max_value=1):
-        self.last_value = None
+    def init(self, limit=30):
+        self.value = 0
 
-    def call(self, signalin, t):
-        if self.name in signalin:
-            value = signalin[self.name]
-            value = max(self.min_value, min(self.max_value, value))
-            value = (value - self.min_value) / (self.max_value - self.min_value)
-            self.last_value = value
-        return self.last_value
+    def call(self, sonar):
+        if sonar >= 0:
+            self.value = sonar < self.limit
+        return self.value
 
-
-class Sonar(L.Signal):
-    """Normalized sonar distance signal, ignores invalid."""
-
-    def init(self, max_sonar=50):
-        self.last_sonar = max_sonar
-
-    def call(self, signalin, t):
-        sonar = signalin.get('sonar', 0)
-        if sonar > 0.1:
-            self.last_sonar = sonar
-        return min(self.max_sonar, self.last_sonar) / self.max_sonar
-
-
-class SonarGood(L.Signal):
-    """Fraction of non-invalid sonar signals in sliding time window."""
-
-    def init(self, time_window_secs=3):
-        self.t_good_sonar = []
-
-    def call(self, t, signalin):
-        sonar = signalin.get('sonar', 0)
-        if sonar > 0:
-            self.t_good_sonar.append((t, sonar))
-        while len(self.t_good_sonar) and (
-                self.t_good_sonar[0][0] < t - self.time_window_secs):
-            del self.t_good_sonar[0]
-        return min(1.0, len(self.t_good_sonar) / (
-            self.time_window_secs * settings.sonar_hz))
 
 # features.wav
 ###############################################################################
@@ -286,7 +250,8 @@ class FreqBreadth(L.Signal):
 
 
 def hz2f(hz, n, rate=None):
-    if rate is None: rate = settings.rate
+    if rate is None:
+        rate = settings.rate
     return hz * np.pi * n / rate
 
 
@@ -294,7 +259,8 @@ class FreqBand(L.Signal):
     """Frequency band with cosine slope. Values not normalized."""
 
     def init(self, hzmin, hzmax, hzslope=1, n=None):
-        if n is None: n = settings.num_mel_bins
+        if n is None:
+            n = settings.num_mel_bins
         fmin, fmax, df = hz2f(hzmin, n), hz2f(hzmax, n), hz2f(hzslope, n)
         self.kernel = np.array([
             self.f01((f + df - fmin) / df) * self.f01((fmax + df - f) / df)
