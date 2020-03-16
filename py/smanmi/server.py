@@ -1,24 +1,16 @@
 """Forwards UDP signals & computes animations."""
 
-import argparse
 import asyncio
 import collections
 import functools
 import inspect
-import json
-import logging
 import os
 import time
 import traceback
 import weakref
 
 from aiohttp import web, WSMsgType, WSCloseCode
-import numpy as np
 
-from openpixelcontrol import opc
-
-from smanmi import hotplug
-from smanmi import settings
 from smanmi import util
 
 
@@ -64,7 +56,7 @@ class UdpForwarding:
 
 
 PeriodicCallback = collections.namedtuple(
-        'PeriodicCallback', ('websocket_path', 'callback', 'fps'))
+    'PeriodicCallback', ('websocket_path', 'callback', 'fps'))
 
 
 class Server:
@@ -93,7 +85,7 @@ class Server:
         assert periodic_callback.websocket_path not in self.udp_forwardings
         assert periodic_callback.websocket_path not in self.periodic_callbacks
         self.periodic_callbacks[
-                periodic_callback.websocket_path] = periodic_callback
+            periodic_callback.websocket_path] = periodic_callback
 
     async def websocket_handler(self, websocket_path, request):
         ws = web.WebSocketResponse()
@@ -108,7 +100,7 @@ class Server:
     def call_create_task(self, function_or_coroutine, *args, **kwargs):
         if inspect.iscoroutinefunction(function_or_coroutine):
             asyncio.get_event_loop().create_task(
-                    function_or_coroutine(*args, **kwargs))
+                function_or_coroutine(*args, **kwargs))
         else:
             function_or_coroutine(*args, **kwargs)
 
@@ -117,18 +109,20 @@ class Server:
             try:
                 if msg.type == WSMsgType.TEXT:
                     self.logger.info(
-                            '%s, received signal: %s', websocket_path, msg.data)
+                        '%s, received signal: %s', websocket_path, msg.data)
                     udp_forwarding = self.udp_forwardings.get(websocket_path)
                     if udp_forwarding and udp_forwarding.out_udp:
                         for transport in self.transports[websocket_path]:
                             if not transport.is_closing():
-                                self.logger.info('sending to %s', udp_forwarding.out_udp)
+                                self.logger.info(
+                                    'sending to %s', udp_forwarding.out_udp)
                                 transport.sendto(msg.data.encode('utf8'))
                     if udp_forwarding and udp_forwarding.out_callback:
-                        self.call_create_task(udp_forwarding.out_callback, msg.data)
+                        self.call_create_task(
+                            udp_forwarding.out_callback, msg.data)
                 elif msg.type == WSMsgType.ERROR:
                     self.logger.warning(
-                            'signals ws closed with exception %s', ws.exception())
+                        'signals ws closed with exception %s', ws.exception())
                 else:
                     self.logger.debug('msg.type=%s', msg.type)
             except Exception as e:
@@ -171,9 +165,9 @@ class Server:
     async def safe_send_bytes(self, name, ws, data):
         try:
             await ws.send_bytes(data)
-        except BrokenPipeError as e:
+        except BrokenPipeError:
             self.logger.warning('broken pipe : %s', name)
-        except ConnectionResetError as e:
+        except ConnectionResetError:
             self.logger.warning('connection reset : %s', name)
         except Exception as e:
             self.logger.warning('other exception "%s" : %s',
@@ -186,7 +180,7 @@ class Server:
             self.call_create_task(udp_forwarding.in_callback, data)
         for ws in self.websockets[websocket_path]:
             asyncio.ensure_future(self.safe_send_bytes(
-                    websocket_path, ws, data))
+                websocket_path, ws, data))
 
     async def periodic_loop(self, periodic_callback):
         t0 = time.time()
@@ -199,14 +193,14 @@ class Server:
                 if data is None:
                     continue
                 self.stats(
-                        'periodic_{}'.format(periodic_callback.websocket_path),
-                        data)
+                    'periodic_{}'.format(periodic_callback.websocket_path),
+                    data)
                 for ws in self.websockets[periodic_callback.websocket_path]:
                     await self.safe_send_bytes(
-                            periodic_callback.websocket_path, ws, data)
+                        periodic_callback.websocket_path, ws, data)
         except Exception as e:
             #TODO retry after next hotplug reload
-            self.logger.error('periodic_loop ERROR: %s', e)
+            self.logger.error('periodic_loop ERROR: %r', e)
             self.logger.warning(traceback.format_exc())
             self.stop()
 
@@ -217,6 +211,7 @@ class Server:
     def udp_protocol_factory_for(self, websocket_path):
         def transport_cb(transport):
             self.transports[websocket_path].add(transport)
+
         def create_udp_protocol():
             return ServerUdpProtocol(
                 websocket_path, self.logger, self.received_udp, transport_cb)
@@ -251,7 +246,7 @@ class Server:
         periodic_tasks = {}
         for websocket_path in self.periodic_callbacks:
             periodic_tasks[websocket_path] = loop.create_task(
-                    self.periodic_loop(self.periodic_callbacks[websocket_path]))
+                self.periodic_loop(self.periodic_callbacks[websocket_path]))
 
         self.logger.info('started server on http://%s:%d', address, port)
         try:
@@ -266,8 +261,8 @@ class Server:
             for wss in self.websockets.values():
                 for ws in list(wss):
                     loop.run_until_complete(ws.close(
-                            code=WSCloseCode.GOING_AWAY,
-                            message='Server shutdown'))
+                        code=WSCloseCode.GOING_AWAY,
+                        message='Server shutdown'))
             loop.run_until_complete(self.runner.cleanup())
 
             loop.close()
