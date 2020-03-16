@@ -18,7 +18,7 @@ class Colorize:
     # https://stackoverflow.com/questions/4842424
     ANSI_RESET = '\033[0m'
     ANSI_MAP = {
-        logging.DEBUG: '\033[90m',  # bright black
+        logging.INFO: '\033[1m',  # bold
         logging.WARNING: '\033[33m',  # yellow
         logging.ERROR: '\033[91m',  # bright red
         logging.FATAL: '\033[30;101m',  # black on bright red

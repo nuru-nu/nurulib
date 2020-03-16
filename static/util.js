@@ -16,7 +16,7 @@ export const h = (function() {
   function of() {
     recarr(Array.from(arguments), el => {
       if (isNode(el)) {
-      } else if (typeof el === 'string') {
+      } else if (typeof el === 'string' || typeof el === 'number') {
         el = document.createTextNode(el)
       } else if (isH(el)) {
         this._els = [...this._els, ...el._els]
@@ -235,7 +235,7 @@ export const Lines = function(output) {
   }
 
   function remove_color(sig) {
-    if (!lines[sig].t) {
+    if (!sig || !lines[sig].t) {
       return
     }
     delete lines[sig].t
