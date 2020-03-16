@@ -82,6 +82,8 @@ def create_udp_socket(port, address, timeout=0):
 def get_json_and_address(sock, max_size=4096):
     try:
         data, address = sock.recvfrom(max_size)
+    except socket.timeout:
+        return None, None
     except io.BlockingIOError:
         return None, None
     try:
