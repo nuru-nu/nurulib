@@ -4,11 +4,11 @@ from . import perf, state, settings, util
 
 
 logger = util.NoLogger()
-
-
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+
 def send(port, data, address=settings.address, sock=sock):
-    msg = json.dumps(util.pythonize(data)).encode('utf8')
+    msg = util.serialize(data)
     sock.sendto(msg + b'\n', (address, port))
 
 
@@ -63,6 +63,14 @@ class StatusSender:
 
 
 def create_udp_socket(port, address, timeout=0):
+    """Creates a UDP socket.
+
+    Args:
+      port: port to listen on
+      address: address to listen on
+      timeout: setting `None` makes the socket blocking, otherwise every call
+          to `recvfrom()` will wait up to `timeout` seconds
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     # sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
