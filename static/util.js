@@ -318,6 +318,10 @@ export const Console = function(output) {
     return wrapper
   }
 
+  window.onerror = (message, source, lineno, colno, error) => {
+   wrap('error')('FATAL ERROR : ', message, ' : ', error.stack);
+  }
+
   let funcs = {
     clear,
   };

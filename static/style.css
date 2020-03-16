@@ -49,3 +49,24 @@ input[type="text"] {
   border-bottom: 1px solid #0f0;
   width: 50vw;
 }
+
+.flex {
+  display: flex;
+  align-items: flex-start;
+}
+
+.on {
+  color: black;
+  background: #0f0;
+}
+
+input[type=range]::-moz-range-thumb {
+  background: #0f0;
+  border: 0;
+  border-radius: 0;
+  width: 2px;
+  height: 8px;
+}
+input[type=range]::-moz-range-track {
+  background: #0f0;
+}

@@ -1,30 +1,16 @@
 import { h, u, colors, Lines } from './util.js'
 
-export const Monitor = (output) => {
+export const Monitor = (output, { presets }) => {
 
   let signals = null
   let sender = null
 
   const width=600, height=128, speed=3, lw=1
 
-  const presets = {
-    default: new Set([
-      'loud',
-      'low',
-      // 'medium',
-      'high',
-    ]),
-    none: new Set([]),
-    all: new Set([]),
-    states: new Set([
-      'drone1',
-      'drone2',
-      'flash',
-      'sonar',
-      'std2',
-    ]),
-  }
-  let preset = presets.default
+  presets = presets || {}
+  presets.none = new Set()
+  presets.all = new Set()
+  let preset = presets.default || presets.all
 
   const states = ['frozen', 'std', 'std2', 'std3', 'ooo', 'flash', 'test', 'color']
   let overrides = {}
@@ -61,7 +47,7 @@ export const Monitor = (output) => {
   disp.overrides.addEventListener('keydown', function(e) {
     if (e.keyCode === 13) {
       if (!sender) {
-        console.warn('cannot sed overrides : no sender')
+        console.warn('cannot send overrides : no sender')
         return
       }
       try {
@@ -92,7 +78,13 @@ export const Monitor = (output) => {
   })
 
   disp.dump.addEventListener('click', () => {
-    disp.output.textContent = JSON.stringify(signals, null, 2)
+    disp.output.textContent = ''
+    u.sorted(Object.entries(signals)).map(([k, v]) => {
+      if (Array.isArray(v)) {
+        v = `[${v.map(x => x.toFixed(3)).join(',')}]`
+      }
+      disp.output.textContent += `${k} = ${v}\n`
+    })
   })
   disp.clear.addEventListener('click', () => {
     disp.output.textContent = ''
