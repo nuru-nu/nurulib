@@ -3,7 +3,6 @@ import { h, u, colors, Lines } from './util.js'
 export const Monitor = (output, { presets }) => {
 
   let signals = null
-  let sender = null
 
   const width=600, height=128, speed=3, lw=1
 
@@ -12,65 +11,27 @@ export const Monitor = (output, { presets }) => {
   presets.all = new Set()
   let preset = presets.default || presets.all
 
-  const states = ['frozen', 'std', 'std2', 'std3', 'ooo', 'flash', 'test', 'color']
-  let overrides = {}
-  const disp = h.div().of(
-    h.select('logmel_src').of(
-      ['input', 'output1l', 'output1r', 'output2l', 'output2r'].map(value => (
-          h.option({value}).of(value)
-      ))
-    ),
-    ' overrides: ',
-    h.input('overrides', {type: 'text', value: JSON.stringify(overrides)}), h.br(),
-    h.canvas('graph', {width, height}),
-    h.br(),
-    h.div('text_sigs'),
-    h.br(),
-    h.div('lines').of(
-      h.select('preset').of(
-        Object.keys(presets).map(preset => (
-          h.option({value: preset}).of(preset)))
+  const disp = h.div({class: 'flex'}).of(
+    h.div().of(
+      h.canvas('graph', {width, height}),
+      h.br(),
+      h.div('lines', {style: `width: ${width}px`}).of(
+        h.select('preset').of(
+          Object.keys(presets).map(preset => (
+            h.option({value: preset}).of(preset)))
+        ),
       ),
       h.br(),
+      h.div('text_sigs'),
+    ), h.div().of(
+      h.button('dump').of('dump'), h.br(),
+      h.button('clear').of('clear'),
+    ), h.div().of(
+      h.pre('output'),
     ),
-    h.br(),
-    states.map(state => h.button(state).of(state)),
-    h.br(),
-    h.button('dump').of('dump'),
-    h.button('clear').of('clear'),
-    h.br(),
-    h.pre('output'),
   ).into(output).els
 
   const lines = Lines(disp.lines)
-
-  disp.overrides.addEventListener('keydown', function(e) {
-    if (e.keyCode === 13) {
-      if (!sender) {
-        console.warn('cannot send overrides : no sender')
-        return
-      }
-      try {
-        overrides = JSON.parse(this.value)
-        try {
-          console.info('sending overrides', this.value)
-          sender({overrides})
-        } catch (e) {
-          console.warn('could not send', e)
-        }
-      } catch (e) {
-        console.warn('invalid overrides', this.value)
-      }
-    }
-  })
-
-  disp.logmel_src.addEventListener('change', () => {
-    if (!sender) {
-      return
-    }
-    sender({logmel_src: disp.logmel_src.value})
-    console.info('sent logmel_src', disp.logmel_src.value)
-  })
 
   disp.preset.addEventListener('change', () => {
     preset = presets[disp.preset.value]
@@ -82,22 +43,14 @@ export const Monitor = (output, { presets }) => {
     u.sorted(Object.entries(signals)).map(([k, v]) => {
       if (Array.isArray(v)) {
         v = `[${v.map(x => x.toFixed(3)).join(',')}]`
+      } else if ('object' === typeof v) {
+        v = JSON.stringify(v)
       }
       disp.output.textContent += `${k} = ${v}\n`
     })
   })
   disp.clear.addEventListener('click', () => {
     disp.output.textContent = ''
-  })
-
-  states.forEach(state => {
-    disp[state].addEventListener('click', () => {
-      if (!sender) {
-        return
-      }
-      sender({newstate: state})
-      console.log('sent newstate', state)
-    })
   })
 
   const ctx = disp.graph.getContext('2d')
@@ -153,12 +106,7 @@ export const Monitor = (output, { presets }) => {
     disp.text_sigs.textContent = text
   }
 
-  function sendto(sender_) {
-    sender = sender_
-  }
-
   return {
     listener,
-    sendto,
   }
 }
