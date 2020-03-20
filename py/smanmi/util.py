@@ -1,7 +1,16 @@
 
-import collections, json, logging, os, signal, socket, sys, time, traceback
+import collections
+import datetime
+import json
+import logging
+import os
+import signal
+import socket
+import sys
+import time
+import traceback
 
-import numpy as np
+import numpy as np  # type: ignore
 
 from . import logic as L, state
 
@@ -10,8 +19,8 @@ FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
 LOGDIR = './logs'
 
 
-# Fail if not initialized ...
-logger = None
+# Will be set when `createLogger()` is called the first time.
+logger: logging.Logger = logging.getLogger()
 
 
 class Colorize:
@@ -326,3 +335,7 @@ def pad_fadecandy(values):
         ])
         for i0 in range(0, values.shape[0], 60)
     ])
+
+
+def now():
+    return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')

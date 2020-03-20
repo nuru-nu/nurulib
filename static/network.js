@@ -72,6 +72,7 @@ export const Network = (output, options) => {
   }
 
   function sender(d) {
+    console.log('>>>', d)
     socks.signals.send(JSON.stringify(d))
   }
 

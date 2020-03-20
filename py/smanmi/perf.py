@@ -1,6 +1,6 @@
 import os, time
 
-import numpy as np
+import numpy as np  # type: ignore
 
 
 def fmt_ns(ns):

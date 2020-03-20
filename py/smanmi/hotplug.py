@@ -23,8 +23,8 @@ class HotPlug:
         """
         self._autoreload = autoreload
         self._logger = logger
-        self._package = (
-            inspect.getmodule(inspect.stack()[1].frame).__package__)
+        module = inspect.getmodule(inspect.stack()[1].frame)
+        self._package = module.__package__ if module else None
         self._module_name = name
         self._reload_mtime = None
         self._module = importlib.import_module(
@@ -50,4 +50,3 @@ class HotPlug:
         if self._autoreload:
             self.hotplug_reload()
         return getattr(self._module, name)
-
