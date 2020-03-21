@@ -35,7 +35,7 @@ export const Network = (output, options) => {
     })
   })
 
-  let listeners = {}
+  let listeners = {}, jsonListeners = new Set()
   Object.keys(socks).forEach(key => listeners[key] = [])
 
   socks.animation.addEventListener('message', function (e) {
@@ -57,8 +57,11 @@ export const Network = (output, options) => {
       timestamps.signals.push(new Date().getTime())
     }
     if (e.data instanceof Blob) {
-      new Response(e.data).text().then(function(data) {
-        listeners.signals.forEach(listener => listener(data))
+      new Response(e.data).text().then(data => {
+        const json = JSON.parse(data)
+        listeners.signals.forEach(listener => {
+          listener(jsonListeners.has(listener) ? json : data)
+        })
       })
       return
     }
@@ -69,6 +72,10 @@ export const Network = (output, options) => {
   function listen(key, listener) {
     listeners[key].push(listener)
     return this
+  }
+  function listenJson(key, listener) {
+    jsonListeners.add(listener)
+    return this.listen(key, listener)
   }
 
   function sender(d) {
@@ -98,6 +105,7 @@ export const Network = (output, options) => {
 
   return {
     listen,
+    listenJson,
     sender,
     download_timestamps,
   }

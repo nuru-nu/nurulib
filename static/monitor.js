@@ -59,7 +59,7 @@ export const Monitor = (output, { presets }) => {
   const nolines = new Set(['logmel', 'mfccs', 't', 'signalin'])
   const text_sigs = new Set(['state', 'position'])
   function listener(data) {
-    signals = JSON.parse(data)
+    signals = data
     t++
     if (signals.state.indexOf('frozen') !== -1) {
       disp.text_sigs.textContent = signals.state
