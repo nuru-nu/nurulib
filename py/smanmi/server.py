@@ -199,7 +199,6 @@ class Server:
                     await self.safe_send_bytes(
                         periodic_callback.websocket_path, ws, data)
         except Exception as e:
-            #TODO retry after next hotplug reload
             self.logger.error('periodic_loop ERROR: %r', e)
             self.logger.warning(traceback.format_exc())
             self.stop()
