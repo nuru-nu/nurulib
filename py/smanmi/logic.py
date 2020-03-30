@@ -197,10 +197,6 @@ class SignalMult(SignalChain):
         return {
             k: values1[k] * values2[k]
             for k in set(values1).intersection(values2)
-            if (
-                isinstance(values1[k], (int, float, complex)) and
-                isinstance(values2[k], (int, float, complex))
-            )
         }
 
     def __repr__(self):
