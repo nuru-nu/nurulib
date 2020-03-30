@@ -84,9 +84,6 @@ class Integrator:
         self.transports = dict(sig=[], cmd=[])
         self.event = asyncio.Event()
 
-    def should_send_now(self, signals):
-        return False
-
     def datagram_received(self, group, data):
         try:
             if group == 'cmd':
@@ -96,8 +93,7 @@ class Integrator:
             self.stats('sig_in', data)
             signals = util.deserialize(data)
             self.signals.update(signals)
-            if self.should_send_now(signals):
-                self.event.set()
+            self.event.set()
         except Exception as e:
             self.logger.error('datagram_received ERROR: %s', e)
             self.logger.warning(traceback.format_exc())

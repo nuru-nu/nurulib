@@ -252,13 +252,15 @@ def make_order(signals, provided):
 class SignalRunner:
     """Runs signals DAG."""
 
-    def __init__(self, signals, provided=None, extra=()):
+    def __init__(self, signals, provided=None, defaults=None):
         """Constructs the SignalRunner.
 
         Args:
           signals: Dictionary mapping signal name to `L.Signal`
           provided: Optional list of signals to be provided to `__call__()` -
               autocomputed if not specified.
+          defaults: Optional dictionary of default values to be assumed if they
+              are missing in signals provided to `__call__()`.
         """
         self.signals = signals
         if provided is None:
@@ -270,13 +272,14 @@ class SignalRunner:
             ))
         self.provided = set(provided)
         self.ordered = make_order(signals, self.provided)
-        self.overrides = {}
+        self.defaults = defaults or {}
 
     def __call__(self, **kw):
-        missing = self.provided.difference(kw.keys())
+        values = dict(**self.defaults)
+        values.update(kw)
+        missing = self.provided.difference(values.keys())
         if missing:
             raise MissingInputsException(f'Missing provided : {missing}')
-        values = dict(**kw)
         for name in self.ordered:
             values[name] = self.signals[name](**values)['value']
         return values
