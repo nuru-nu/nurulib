@@ -39,6 +39,7 @@ class HotPlug:
         try:
             self._reload_mtime = os.path.getmtime(self._module.__file__)
             importlib.reload(self._module)
+            self._logger.info('Reloaded %s', self._module_name)
         except Exception as e:
             self._logger.warn('Cannot eval {}{} : {}'.format(
                 self._module_name, self._package, e))
