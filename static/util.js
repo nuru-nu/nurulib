@@ -106,7 +106,7 @@ export const h = (function() {
   }
   let ns = {}
   let tags = [
-    'div', 'span', 'button', 'pre', 'canvas', 'br',
+    'a', 'div', 'span', 'button', 'pre', 'canvas', 'br',
     'input', 'label', 'select', 'option'
   ]
   tags.forEach(tag => {
