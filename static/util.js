@@ -5,7 +5,7 @@
 // stuff.els.first.addEventListener('click', ...)
 export const h = (function() {
   function isNode(x) {
-    return x.hasOwnProperty('baseURI')
+    return x instanceof HTMLElement
   }
   function isH(x) {
     return x.hasOwnProperty('_els')
@@ -16,6 +16,7 @@ export const h = (function() {
   function of() {
     recarr(Array.from(arguments), el => {
       if (isNode(el)) {
+        if (el.name) this.els[el.name] = el
       } else if (typeof el === 'string' || typeof el === 'number') {
         el = document.createTextNode(el)
       } else if (isH(el)) {
@@ -115,6 +116,80 @@ export const h = (function() {
     }
   })
   return ns
+})();
+
+// Synposis:
+// ui.h(ui.v('top', 'bottom'), 'right')
+// ui.choice({values: ['A', 'B']}).change(value => {})
+// ui.dropdown({values: ['A', 'B']}).change(value => {})
+// ui.toggle(name).change(value => {})
+export const ui = (() => {
+
+  const updater = (el, initial) => {
+    const listeners = new Set()
+    el.change = listener => {
+      listeners.add(listener)
+      listener(initial)
+    }
+    return value => {
+      Array.from(listeners).map(listener => listener(value))
+    }
+  }
+
+  const choice = (name, {values, initial}) => {
+    initial = initial || values[0]
+    const listeners = new Set()
+    const disp = h.div('cont', {class: 'flex'}).of(
+      values.map(value => h.button(value).of(value))
+    ).els
+    const update = updater(disp.cont, initial)
+    values.map(value => disp[value].addEventListener('click', () => {
+      values.map(value => disp[value].classList.remove('on'))
+      disp[value].classList.add('on')
+      update(value)
+    }))
+    disp[initial].dispatchEvent(new Event('click'))
+    disp.cont.name = name
+    return disp.cont
+  }
+
+  const dropdown = (name, {values, initial}) => {
+    initial = initial || values[0]
+    const listeners = new Set()
+    const select = h.select().of(
+      values.map(value => h.option({value}).of(value))
+    ).el
+    const update = updater(select, initial)
+    select.addEventListener('change', e => update(select.value))
+    select.value = initial
+    select.dispatchEvent(new Event('change'))
+    select.name = name
+    return select
+  }
+
+  const toggle = (name, initial) => {
+    let value = initial || false
+    const button = h.button().of(name).el
+    button.name = name
+    const update = updater(button, initial)
+    button.addEventListener('click', () => {
+      value = !value
+      button.classList[value ? 'add' : 'remove']('on')
+      update(value)
+    })
+    return button
+  }
+
+  function v() { return h.div().of(Array.from(arguments)) }
+  function h_() { return h.div({class: 'flex'}).of(Array.from(arguments)) }
+
+  return {
+    choice,
+    dropdown,
+    h: h_,
+    toggle,
+    v,
+  }
 })();
 
 // Some handy utilities.
