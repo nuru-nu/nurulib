@@ -13,7 +13,8 @@ Note on Ableton Live:
 1. Preferences : Link MIDI : MIDI Port 'IAC Driver' enable 'Remote'
 2. Click on 'MIDI' (top left button)
 3. Agitate UI element to connewct
-4. Run `python -m smanmi.udp_midi --midi_name='IAC Driver Bus 1' --send=C2
+4. Run `python -m smanmi.midi --midi_name='IAC Driver Bus 1' --send='C2 on'
+       `python -m smanmi.midi --midi_name='IAC Driver Bus 1' --send='C2 off'
 
 Note on testing the setup:
 
