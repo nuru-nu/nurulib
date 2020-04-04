@@ -67,7 +67,15 @@ class Integrator:
               `should_send_now()` is called, and if that method returns `True`,
               then signals are sent immediately. Setting `fps=0` results in
               sending signals only based on `should_send_now()`.
-          address : all outgoing UDP packets will be sent to this address
+          sig_in_ports: list of ports (or address,port tuples) to receive
+              signal packages from
+          sig_out_ports: list of ports (or address,port tuples) to send
+              signal packages to
+          cmd_in_ports: list of ports (or address,port tuples) to receive
+              command packages from
+          cmd_out_ports: list of ports (or address,port tuples) to send
+              command packages to
+          address : default address for UDP packets
         """
         self.logger = logger
         self.fps = fps
@@ -150,20 +158,27 @@ class Integrator:
         loop.set_debug(True)
         loop.set_exception_handler(self.exception_handler)
 
+        def address_port(port_or_tuple):
+            if isinstance(port_or_tuple, int):
+                return self.address, port_or_tuple
+            return port_or_tuple
+
         for group, ports in (
                 ('sig', self.sig_in_ports),
                 ('cmd', self.cmd_in_ports)):
-            for port in ports:
+            for port_or_tuple in ports:
+                address, port = address_port(port_or_tuple)
                 loop.run_until_complete(loop.create_datagram_endpoint(
                     lambda: SignalinProtocol(self, group),
-                    local_addr=('127.0.0.1', port)))
+                    local_addr=(address, port)))
         for group, ports in (
                 ('sig', self.sig_out_ports),
                 ('cmd', self.cmd_out_ports)):
-            for port in ports:
+            for port_or_tuple in ports:
+                address, port = address_port(port_or_tuple)
                 loop.run_until_complete(loop.create_datagram_endpoint(
                     lambda: UdpOutProtocol(self, group),
-                    remote_addr=(self.address, port)))
+                    remote_addr=(address, port)))
 
         self.running = True
         sending_task = loop.create_task(self.sending_loop())
