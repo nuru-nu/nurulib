@@ -207,15 +207,6 @@ class Server:
         msg = context.get('exception', context['message'])
         self.logger.error('caught exception: %s', msg)
 
-    def udp_protocol_factory_for(self, websocket_path):
-        def transport_cb(transport):
-            self.transports[websocket_path].add(transport)
-
-        def create_udp_protocol():
-            return ServerUdpProtocol(
-                websocket_path, self.logger, self.received_udp, transport_cb)
-        return create_udp_protocol
-
     def run(self, udp_address='127.0.0.1', address='localhost', port=8080):
         self.init_app()
 
