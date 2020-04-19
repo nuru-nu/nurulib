@@ -4,7 +4,6 @@ import datetime
 import json
 import logging
 import os
-import signal
 import socket
 import sys
 import time
@@ -13,6 +12,7 @@ import traceback
 import numpy as np  # type: ignore
 
 from . import logic as L, state
+from . import sigint
 
 
 FORMAT = '%(asctime)s - %(levelname)s - %(message)s'
@@ -283,9 +283,8 @@ class StreamingStats:
         self.hz = hz
 
     def catch_ctrlc(self, shutdown_callback):
-        self.last_ctrlc = 0
-        self.shutdown_callback = shutdown_callback
-        signal.signal(signal.SIGINT, self.sigint_handler)
+        sigint.register_ctrlc_handler(self.dump_reset)
+        sigint.register_ctrlc2_handler(shutdown_callback)
 
     def sigint_handler(self, *_):
         print()
