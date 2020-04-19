@@ -20,9 +20,12 @@ class Measurement:
         self.mean_ns = int(a.mean())
         self.std_ns = int(a.std())
 
+    def mean_std(self):
+        return '{}±{}'.format(
+            fmt_ns(self.mean_ns), fmt_ns(self.std_ns))
+
     def __str__(self):
-        return 'Measurement({}, {}±{})'.format(
-            self.n, fmt_ns(self.mean_ns), fmt_ns(self.std_ns))
+        return 'Measurement({}, {})'.format(self.n, self.mean_std())
 
     def __repr__(self):
         return str(self)
@@ -62,8 +65,11 @@ class Timer:
         return self.measurements[i % self.keep]
 
     def __str__(self):
-        return 'Timer({} - {}, {}, ...)'.format(
-            self.i, self.measurement(), self.measurement(1))
+        return 'Timer({} - {}, ...)'.format(
+            self.i, ', '.join([
+                self.measurement(i).mean_std()
+                for i in range(min(self.i, 10, self.keep))
+            ]))
 
     def __repr__(self):
         return str(self)
