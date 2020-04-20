@@ -11,7 +11,7 @@ There are two flows of information:
   it is immediately forwarded to all output ports
 """
 
-import asyncio, time, traceback
+import asyncio, traceback
 
 from . import util
 
@@ -39,34 +39,25 @@ class UdpOutProtocol(asyncio.DatagramProtocol):
         self.integrator.connection_made(self.group, transport)
 
 
-class Integrator:
+class IntegrationServer:
 
-    """Integrates `signalin` to produce `signals`.
+    """Async server for distribution of signals and commands.
 
-    Client classes must overwrite the `__call__()` method that computes the
-    output signals from the input signals.
+    Both signals and commads are received from multiple ports and sent to
+    multiple ports/addresses.
 
-    Note that `self.signals` will only be updated with new signals retured by
-    `__call__()`, and old signals are kept until overridden.
+    Commands are sent as is, whenever they arrive.
 
-    Client classes can also override the following methods:
-
-    - `should_send_now(signals)` : called with the currently received input
-      signals. will immediately send output signals if this method returns
-      `True`, otherwise will wait until next `fps` is reached
+    Signals are forwarded to registered listeners (`onreceive()`) which should
+    in turn call `send()` when "enough" signals are accumulated.
     """
 
-    def __init__(self, logger, fps, address,
+    def __init__(self, logger, address,
                  sig_in_ports, sig_out_ports,
                  cmd_in_ports, cmd_out_ports):
-        """Initializes the integrator -- call `start()` to start.
+        """Initializes the serverr -- call `start()` to start.
 
         Args (non exhaustive):
-          fps : At what frequency `__call__()` should be called *at least*.
-              Every time new signals are recived, the function
-              `should_send_now()` is called, and if that method returns `True`,
-              then signals are sent immediately. Setting `fps=0` results in
-              sending signals only based on `should_send_now()`.
           sig_in_ports: list of ports (or address,port tuples) to receive
               signal packages from
           sig_out_ports: list of ports (or address,port tuples) to send
@@ -78,7 +69,6 @@ class Integrator:
           address : default address for UDP packets
         """
         self.logger = logger
-        self.fps = fps
         self.address = address
         self.sig_in_ports = sig_in_ports
         self.sig_out_ports = sig_out_ports
@@ -88,9 +78,12 @@ class Integrator:
         self.stats = util.StreamingStats(logger)
         self.stats.catch_ctrlc(self.stop)
         self.loop = None
-        self.running = False
         self.transports = dict(sig=[], cmd=[])
         self.event = asyncio.Event()
+        self.onreceive_listeners = set()
+
+    def onreceive(self, listener):
+        self.onreceive_listeners.add(listener)
 
     def datagram_received(self, group, data):
         try:
@@ -98,10 +91,10 @@ class Integrator:
                 self.sendto('cmd', data)
                 return
             assert group == 'sig', group
-            self.stats('sig_in', data)
+            self.stats(f'sig_in', data)
             signals = util.deserialize(data)
-            self.signals.update(signals)
-            self.event.set()
+            for listener in self.onreceive_listeners:
+                listener(signals)
         except Exception as e:
             self.logger.error('datagram_received ERROR: %s', e)
             self.logger.warning(traceback.format_exc())
@@ -117,26 +110,11 @@ class Integrator:
                 continue
             transport.sendto(msg)
 
-    async def sending_loop(self):
-        self.t = time.time()
+    def send(self, signals):
         try:
-            while self.running:
-                if self.fps:
-                    dt = 1 / self.fps - (time.time() - self.t)
-                    try:
-                        await asyncio.wait_for(self.event.wait(), max(0, dt))
-                    except asyncio.TimeoutError:
-                        pass
-                else:
-                    await self.event.wait()
-                self.event.clear()
-                self.signals['t'] = self.t = time.time()
-                signals = self()
-                if signals:
-                    self.signals.update(signals)
-                    msg = util.serialize(self.signals)
-                    self.sendto('sig', msg)
-                    self.stats('sig_out', msg)
+            msg = util.serialize(signals)
+            self.sendto('sig', msg)
+            self.stats('sig_out', msg)
         except Exception as e:
             self.logger.error('sending_loop ERROR: %r', e)
             self.logger.warning(traceback.format_exc())
@@ -145,7 +123,6 @@ class Integrator:
     def stop(self):
         if self.loop is not None:
             self.loop.stop()
-        self.running = False
 
     def exception_handler(self, loop, context):
         self.logger.error(
@@ -180,15 +157,11 @@ class Integrator:
                     lambda: UdpOutProtocol(self, group),
                     remote_addr=(address, port)))
 
-        self.running = True
-        sending_task = loop.create_task(self.sending_loop())
-
         self.logger.info('run_forever()')
         try:
             loop.run_forever()
         finally:
             self.logger.info('shutting down..')
-            loop.run_until_complete(sending_task)
             self.logger.info('done')
             loop.close()
             self.loop = None

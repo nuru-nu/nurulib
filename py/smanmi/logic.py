@@ -19,7 +19,9 @@ Synoposis:
   print(values['a'])
 """
 
-import functools, inspect, random
+import functools
+import inspect
+import random
 
 # utils
 ###############################################################################
@@ -233,12 +235,14 @@ def make_order(signals, provided):
             if len(provided.intersection(signal.wants)) == len(signal.wants):
                 done.add(name)
         if not done:
-            raise MissingInputsException('could not satisfy ANY of {}'.format(
-                ', '.join([
-                    '{}->{}'.format(signals[name], signals[name].wants)
-                    for name in names
-                ])
-            ))
+            raise MissingInputsException(
+                'Given {}, could not satisfy ANY of {}'.format(
+                    provided,
+                    ', '.join([
+                        '{}->{}'.format(signals[name], signals[name].wants)
+                        for name in names
+                    ])
+                ))
         names = names.difference(done)
         provided = provided.union(done)
         ordered += list(done)
@@ -248,31 +252,28 @@ def make_order(signals, provided):
 class SignalRunner:
     """Runs signals DAG."""
 
-    def __init__(self, signals, provided=None, defaults=None):
+    def __init__(self, signals):
         """Constructs the SignalRunner.
 
         Args:
           signals: Dictionary mapping signal name to `L.Signal`
-          provided: Optional list of signals to be provided to `__call__()` -
-              autocomputed if not specified.
-          defaults: Optional dictionary of default values to be assumed if they
-              are missing in signals provided to `__call__()`.
         """
         self.signals = signals
-        if provided is None:
-            provided = functools.reduce(
-                lambda acc, sig: acc.union(sig.wants), signals.values(), set()
-            ).difference((
-                name for name, signal in signals.items()
-                if name not in signal.wants
-            ))
-        self.provided = set(provided)
+        self.provided = functools.reduce(
+            lambda acc, sig: acc.union(sig.wants), signals.values(), set()
+        ).difference((
+            name for name, signal in signals.items()
+            if name not in signal.wants
+        ))
         self.ordered = make_order(signals, self.provided)
-        self.defaults = defaults or {}
 
     def __call__(self, **kw):
-        values = dict(**self.defaults)
-        values.update(kw)
+        """Computes output signals from input signals.
+
+        Note that input signals are copied onto output signals, but can be
+        overriden if an output signal has the same name.
+        """
+        values = dict(**kw)
         missing = self.provided.difference(values.keys())
         if missing:
             raise MissingInputsException(f'Missing provided : {missing}')

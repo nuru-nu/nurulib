@@ -53,9 +53,8 @@ class NotInState(L.Signal):
 class RndPulse(L.Signal):
 
     def init(self, break_minmax):
-        self.break_minmax = break_minmax
         self.t0 = None
-        self.wait_s = L.rnd(self.break_minmax)
+        self.wait_s = L.rnd(break_minmax)
 
     def call(self, t):
         if self.t0 is None:
@@ -65,6 +64,19 @@ class RndPulse(L.Signal):
             self.wait_s = L.rnd(self.break_minmax)
             return 1.
         return 0.
+
+
+class MidiPulse(L.Signal):
+
+    def init(self, port_letter_octave):
+        self.state = 0
+
+    def call(self, midi):
+        if midi == f'{self.port_letter_octave} on':
+            self.state = 1
+        if midi == f'{self.port_letter_octave} off':
+            self.state = 0
+        return self.state
 
 
 class TriggerPulse(L.Signal):
