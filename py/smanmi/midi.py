@@ -36,7 +36,7 @@ from . import util
 class Midi:
 
     COMMAND = re.compile(
-        r'(?P<port>\d+)(?P<letter>[A-G]#?)(?P<octave>-?\d+) (?P<command>.*)')
+        r'(?P<port>\d+): (?P<letter>[A-G]#?)(?P<octave>-?\d+) (?P<command>.*)')
     LETTERS = (
         'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
     )
