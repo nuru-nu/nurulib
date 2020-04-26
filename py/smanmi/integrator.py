@@ -98,6 +98,7 @@ class IntegrationServer:
         except Exception as e:
             self.logger.error('datagram_received ERROR: %s', e)
             self.logger.warning(traceback.format_exc())
+            self.logger.warning('data=%s', data.decode('utf8'))
             self.stop()
 
     def connection_made(self, group, transport):
