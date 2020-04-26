@@ -41,7 +41,7 @@ export const Monitor = (output, { presets }) => {
   disp.dump.addEventListener('click', () => {
     disp.output.textContent = ''
     u.sorted(Object.entries(signals)).map(([k, v]) => {
-      if (Array.isArray(v)) {
+      if (Array.isArray(v) && v.length && 'number' === typeof v[0]) {
         v = `[${v.map(x => x.toFixed(3)).join(',')}]`
       } else if ('object' === typeof v) {
         v = JSON.stringify(v)
