@@ -52,13 +52,23 @@ export const Network = (output, options) => {
     console.log('unexpected data type', e.data)
     throw 'unexpected data type'
   })
+  let parse_t0 = Date.now()
   socks.signals.addEventListener('message', function (e) {
     if (record_timestamps) {
       timestamps.signals.push(new Date().getTime())
     }
     if (e.data instanceof Blob) {
       new Response(e.data).text().then(data => {
-        const json = JSON.parse(data)
+        let json
+        try {
+          json = JSON.parse(data)
+        } catch (e) {
+          if (Date.now() - parse_t0 > 1000) {
+            console.error('Could not parse JSON', data)
+            parse_t0 = Date.now()
+          }
+          return
+        }
         listeners.signals.forEach(listener => {
           listener(jsonListeners.has(listener) ? json : data)
         })
