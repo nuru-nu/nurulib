@@ -55,6 +55,10 @@ input[type="text"] {
   align-items: flex-start;
 }
 
+.h {
+  display: none;
+}
+
 .on {
   color: black;
   background: #0f0;

@@ -1,4 +1,4 @@
-import { h, u, colors, Lines } from './util.js'
+import { h, ui, u, colors, Lines } from './util.js'
 
 export const Monitor = (output, { presets }) => {
 
@@ -23,11 +23,6 @@ export const Monitor = (output, { presets }) => {
       ),
       h.br(),
       h.div('text_sigs'),
-    ), h.div().of(
-      h.button('dump').of('dump'), h.br(),
-      h.button('clear').of('clear'),
-    ), h.div().of(
-      h.pre('output'),
     ),
   ).into(output).els
 
@@ -36,21 +31,6 @@ export const Monitor = (output, { presets }) => {
   disp.preset.addEventListener('change', () => {
     preset = presets[disp.preset.value]
     lines.set(preset)
-  })
-
-  disp.dump.addEventListener('click', () => {
-    disp.output.textContent = ''
-    u.sorted(Object.entries(signals)).map(([k, v]) => {
-      if (Array.isArray(v) && v.length && 'number' === typeof v[0]) {
-        v = `[${v.map(x => x.toFixed(3)).join(',')}]`
-      } else if ('object' === typeof v) {
-        v = JSON.stringify(v)
-      }
-      disp.output.textContent += `${k} = ${v}\n`
-    })
-  })
-  disp.clear.addEventListener('click', () => {
-    disp.output.textContent = ''
   })
 
   const ctx = disp.graph.getContext('2d')
@@ -104,6 +84,41 @@ export const Monitor = (output, { presets }) => {
       }
     })
     disp.text_sigs.textContent = text
+  }
+
+  return {
+    listener,
+  }
+}
+
+export const Dump = output => {
+  const disp = h.div().of(
+    ui.h(
+      h.button('dump').of('dump'),
+      h.button('clear').of('clear'),
+    ),
+    h.pre('output'),
+  ).into(output).els
+
+  disp.dump.addEventListener('click', () => {
+    disp.output.textContent = ''
+    u.sorted(Object.entries(signals)).map(([k, v]) => {
+      if (Array.isArray(v) && v.length && 'number' === typeof v[0]) {
+        v = `[${v.map(x => x.toFixed(3)).join(',')}]`
+      } else if ('object' === typeof v) {
+        v = JSON.stringify(v)
+      }
+      disp.output.textContent += `${k} = ${v}\n`
+    })
+  })
+
+  disp.clear.addEventListener('click', () => {
+    disp.output.textContent = ''
+  })
+
+  let signals = null
+  function listener(data) {
+    signals = data
   }
 
   return {
