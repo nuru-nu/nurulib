@@ -117,18 +117,6 @@ class RndRamp(L.Signal):
         return 1 - (t - self.t2) / (self.t3 - self.t2)
 
 
-class Into(L.Signal):
-    """Turns on when head presence is detected by sonar."""
-
-    def init(self, limit=30):
-        self.value = 0
-
-    def call(self, sonar):
-        if sonar >= 0:
-            self.value = sonar < self.limit
-        return self.value
-
-
 # features.wav
 ###############################################################################
 

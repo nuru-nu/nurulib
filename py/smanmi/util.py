@@ -274,7 +274,7 @@ class Timetracer:
 class StreamingStats:
     """Helper class to periodically show stats."""
 
-    def __init__(self, logger, hz=0.1, delay0=1.0):
+    def __init__(self, logger, hz=0.01, delay0=1.0):
         self.logger = logger
         self.t0 = time.time() - 1 / hz + delay0
         self.total = {}
