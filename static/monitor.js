@@ -20,7 +20,7 @@ export const Monitor = (output, { presets }) => {
       ),
       h.span('lines'),
     ),
-    h.div('text_sigs'),
+    h.div('text_sigs', {style: 'margin-top: 20px'}),
   ).into(output).els
 
   const lines = Lines(disp.lines)
