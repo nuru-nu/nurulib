@@ -11,7 +11,7 @@ import traceback
 
 import numpy as np  # type: ignore
 
-from . import logic as L, state
+from . import logic as L
 from . import sigint
 
 
@@ -127,6 +127,21 @@ def float_to_int16(a):
     return a
 
 
+serializers = {}
+
+
+def register_serializer(name):
+    """Registers [de]serializer `cls` for signal with `name`.
+
+    Deerialization is performed via single constructor argument and
+    serialization is performed by callint `repr()` on the instance.
+    """
+    def wrapped(cls):
+        serializers[name] = cls
+        return cls
+    return wrapped
+
+
 def pythonize(d):
     """Transforms numpy arrays, float32, int64 to native Python dtypes."""
     if isinstance(d, dict):
@@ -137,21 +152,23 @@ def pythonize(d):
         return float(d)
     if isinstance(d, np.int64):
         return int(d)
-    if isinstance(d, state.State):
-        return str(d)
     return d
 
 
 def serialize(signals):
     """Serializes `signals` to UTF8, also serializing "state" etc."""
+    for name, value in signals.items():
+        if name in serializers:
+            signals[name] = repr(signals[name])
     return json.dumps(pythonize(signals)).encode('utf8')
 
 
 def deserialize(msg):
     """Does the opposite of `serialize()`."""
     signals = json.loads(msg.decode('utf8'))
-    if 'state' in signals:
-        signals['state'] = state.State(signals['state'])
+    for name, cls in serializers.items():
+        if name in signals:
+            signals[name] = cls(signals[name])
     return signals
 
 
@@ -193,10 +210,9 @@ def get_signals(wav, signals, hop_secs, wav2features):
     runner = L.SignalRunner(signals, ('features', 't', 'signalin', 'state'))
     values = collections.defaultdict(lambda: [])
     t = 0
-    st = state.State()
     for buf in Streamer(wav):
         feats = wav2features(buf)
-        sigs = runner(features=feats, t=t, signalin={}, state=st)
+        sigs = runner(features=feats, t=t, signalin={})
         for name, value in sigs.items():
             values[name].append(value)
         t += hop_secs
