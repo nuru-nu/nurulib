@@ -11,19 +11,16 @@ export const Monitor = (output, { presets }) => {
   presets.all = new Set()
   let preset = presets.default || presets.all
 
-  const disp = h.div({class: 'flex'}).of(
-    h.div().of(
-      h.canvas('graph', {width, height}),
-      h.br(),
-      h.div('lines', {style: `width: ${width}px`}).of(
-        h.select('preset').of(
-          Object.keys(presets).map(preset => (
-            h.option({value: preset}).of(preset)))
-        ),
+  const disp = ui.v(
+    h.canvas('graph', {width, height}),
+    h.div({style: `width: ${width}px`}).of(
+      h.select('preset').of(
+        Object.keys(presets).map(preset => (
+          h.option({value: preset}).of(preset)))
       ),
-      h.br(),
-      h.div('text_sigs'),
+      h.span('lines'),
     ),
+    h.div('text_sigs'),
   ).into(output).els
 
   const lines = Lines(disp.lines)

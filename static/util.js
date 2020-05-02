@@ -320,6 +320,18 @@ export const Lines = function(output) {
     lines[sig].checkbox.checked = false
   }
 
+  function sort(cont) {
+    const arr = []
+    for (let i = 0; i < cont.children.length; i++) {
+      arr.push([cont.children[i].children[1].textContent, cont.children[i]])
+    }
+    // const arr = Array.from(cont.children).forEach(child => [
+    //   child.querySelector('label').textContent, child])
+    arr.sort()
+    while (cont.firstChild) cont.removeChild(cont.firstChild)
+    arr.forEach(text_child => cont.appendChild(text_child[1]))
+  }
+
   function get(sig, t, preset) {
     if (!lines.hasOwnProperty(sig)) {
       const n = Object.keys(lines).length
@@ -328,6 +340,7 @@ export const Lines = function(output) {
         h.label('label', {for: `line_${sig}`}).of(sig),
         ' ',
       ).into(output).els
+      sort(output)
       lines[sig] = { ...els, color: null }
       if (preset && preset.has(sig)) {
         set_next_color(sig)
