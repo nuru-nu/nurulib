@@ -1,4 +1,4 @@
-"""Building blocs for signals etc.
+"""Building blocks for signals etc.
 
 Synoposis:
 
@@ -14,7 +14,7 @@ Synoposis:
     def call(self, in1, in2):
         return dict(value=in1 + in2)
 
-  runner = S.SignalRunner(dict(a=A(mult=3, b=B())), ['in1', 'in2'])
+  runner = S.SignalRunner(dict(a=A(mult=3, b=B())))
   values = runner(in1=1, in2=2)
   print(values['a'])
 """
@@ -141,13 +141,14 @@ class SignalLast(Signal):
     """Provides lastin, lastout."""
 
     def __call__(self, **allkw):
-        kw = {k: allkw[k] for k in self.wants}
+        kw = {k: allkw[k] for k in self.callkws}
         if not hasattr(self, 'lastin'):
             self.lastin = self.lastout = D(**kw)
         lastin = D(**kw)
         value = super().__call__(**allkw)
         self.lastin = lastin
-        self.lastout = D(value=value)
+        kw['value'] = value
+        self.lastout = D(**kw)
         return value
 
 
