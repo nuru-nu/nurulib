@@ -16,7 +16,7 @@ import asyncio, traceback
 from . import util
 
 
-class SignalinProtocol(asyncio.DatagramProtocol):
+class UdpInProtocol(asyncio.DatagramProtocol):
     """Forwards datagrams from an UDP port to the integrator."""
 
     def __init__(self, integrator, group):
@@ -48,7 +48,7 @@ class IntegrationServer:
 
     Commands are sent as is, whenever they arrive.
 
-    Signals are forwarded to registered listeners (`onreceive()`) which should
+    Signals are forwarded to registered listeners (`onsignal()`) which should
     in turn call `send()` when "enough" signals are accumulated.
     """
 
@@ -80,20 +80,27 @@ class IntegrationServer:
         self.loop = None
         self.transports = dict(sig=[], cmd=[])
         self.event = asyncio.Event()
-        self.onreceive_listeners = set()
+        self.oncmd_listeners = set()
+        self.onsignal_listeners = set()
 
-    def onreceive(self, listener):
-        self.onreceive_listeners.add(listener)
+    def oncmd(self, listener):
+        self.oncmd_listeners.add(listener)
+
+    def onsignal(self, listener):
+        self.onsignal_listeners.add(listener)
 
     def datagram_received(self, group, data):
         try:
             if group == 'cmd':
                 self.sendto('cmd', data)
+                cmd = util.deserialize(data)
+                for listener in self.oncmd_listeners:
+                    listener(cmd)
                 return
             assert group == 'sig', group
             self.stats(f'sig_in', data)
             signals = util.deserialize(data)
-            for listener in self.onreceive_listeners:
+            for listener in self.onsignal_listeners:
                 listener(signals)
         except Exception as e:
             self.logger.error('datagram_received ERROR: %s', e)
@@ -147,7 +154,7 @@ class IntegrationServer:
             for port_or_tuple in ports:
                 address, port = address_port(port_or_tuple)
                 loop.run_until_complete(loop.create_datagram_endpoint(
-                    lambda: SignalinProtocol(self, group),
+                    lambda: UdpInProtocol(self, group),
                     local_addr=(address, port)))
         for group, ports in (
                 ('sig', self.sig_out_ports),
