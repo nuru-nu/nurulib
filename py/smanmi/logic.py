@@ -81,12 +81,14 @@ class Signal:
 
     Note the following special attributes
     - `wants` : signals needed for computation - used by `SignalRunner`
+    - `callkws` : part of `wants` that is needed as params for `call()`
     - `params` : names of parameters (for `repr()` display)
     - `signalparams` : dictionary of signals from which to compute params
     """
 
     def __init__(self, *args, **params):
-        self.wants = inspect.getfullargspec(self.call).args[1:]
+        self.callkws = set(inspect.getfullargspec(self.call).args[1:])
+        self.wants = set(self.callkws)
         self.params = params.keys()
         if hasattr(self, 'init'):
             names = inspect.getfullargspec(self.init).args[1:]
@@ -105,6 +107,7 @@ class Signal:
             setattr(self, k, v)
             if is_signal(v):
                 self.signalparams[k] = v
+                self.wants = self.wants.union(v.wants)
 
     def __or__(self, other):
         return SignalChain(self, other)
@@ -112,22 +115,18 @@ class Signal:
     def __mul__(self, other):
         return SignalMult(self, other)
 
+    def __add__(self, other):
+        return SignalAdd(self, other)
+
     def __call__(self, **allkw):
         for k, v in self.signalparams.items():
-            setattr(self, k, v(**allkw)['value'])
+            setattr(self, k, v(**allkw))
         missing = set(self.wants).difference(allkw.keys())
         if missing:
             raise MissingInputsException(
                 f'Signal {self!r} is missing inputs {missing}')
-        kw = {k: allkw[k] for k in self.wants}
-        ret = self.call(**kw)
-        if not isinstance(ret, dict):
-            ret = dict(value=ret, **{
-                k: allkw[k]
-                for k in allkw
-                if k != 'value'
-            })
-        return ret
+        kw = {k: allkw[k] for k in self.callkws}
+        return self.call(**kw)
 
     def __repr__(self):
         return '{}({})'.format(
@@ -146,10 +145,10 @@ class SignalLast(Signal):
         if not hasattr(self, 'lastin'):
             self.lastin = self.lastout = D(**kw)
         lastin = D(**kw)
-        ret = super().__call__(**allkw)
+        value = super().__call__(**allkw)
         self.lastin = lastin
-        self.lastout = D(**ret)
-        return ret
+        self.lastout = D(value=value)
+        return value
 
 
 class Constant(Signal):
@@ -165,7 +164,7 @@ class Constant(Signal):
 class SignalChain(Signal):
 
     def __init__(self, sig1, sig2):
-        self.wants = sig1.wants
+        self.wants = sig1.wants.union(sig2.wants.difference(('value',)))
         self.sig1 = sig1
         self.sig2 = sig2
         nsigs1 = sig1.nsigs if isinstance(sig1, SignalChain) else 1
@@ -181,28 +180,51 @@ class SignalChain(Signal):
             yield sig
 
     def __call__(self, **kw):
-        return self.sig2(**self.sig1(**kw))
+        return self.sig2(value=self.sig1(**kw), **{
+            k: v for k, v in kw.items() if k != 'value'})
 
     def __repr__(self):
         return ' | '.join([repr(self.sig1), repr(self.sig2)])
 
 
 class SignalMult(SignalChain):
+    """Multiplies signals, tries to be smart about shapes."""
 
     def __init__(self, sig1, sig2):
         super().__init__(sig1, sig2)
-        self.wants = list(set(sig1.wants).union(sig2.wants))
+        self.wants = set(sig1.wants).union(sig2.wants)
 
     def __call__(self, **kw):
-        values1 = self.sig1(**kw)
-        values2 = self.sig2(**kw)
-        return {
-            k: values1[k] * values2[k]
-            for k in set(values1).intersection(values2)
-        }
+        value1 = self.sig1(**kw)
+        value2 = self.sig2(**kw)
+        if value1.shape == value2.shape:
+            return value1 * value2
+        if value1.shape == () or value2.shape == ():
+            return value1 * value2
+        # Handy hack for animations.
+        assert len(value1.shape) == 1, value1.shape
+        assert len(value2.shape) == 1, value2.shape
+        a = value1 if len(value1) < len(value2) else value2
+        b = value2 if len(value1) < len(value2) else value1
+        return a.reshape((1, -1)) * b.reshape((-1, 1))
 
     def __repr__(self):
         return ' * '.join([repr(self.sig1), repr(self.sig2)])
+
+
+class SignalAdd(SignalChain):
+
+    def __init__(self, sig1, sig2):
+        super().__init__(sig1, sig2)
+        self.wants = set(sig1.wants).union(sig2.wants)
+
+    def __call__(self, **kw):
+        value1 = self.sig1(**kw)
+        value2 = self.sig2(**kw)
+        return value1 + value2
+
+    def __repr__(self):
+        return ' + '.join([repr(self.sig1), repr(self.sig2)])
 
 
 # Basic signals
@@ -213,7 +235,8 @@ class Named(Signal):
     def __init__(self, name, default=None):
         # Overwrite so we can specify positional arguments
         super().__init__(name=name)
-        self.wants = (name,)
+        self.callkws = set((name,))
+        self.wants = set(self.callkws)
         self.default = default
 
     def call(self, **kw):
@@ -278,5 +301,5 @@ class SignalRunner:
         if missing:
             raise MissingInputsException(f'Missing provided : {missing}')
         for name in self.ordered:
-            values[name] = self.signals[name](**values)['value']
+            values[name] = self.signals[name](**values)
         return values

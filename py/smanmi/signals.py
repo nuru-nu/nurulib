@@ -234,7 +234,7 @@ class MidiPulse(L.Signal):
 # generators
 ###############################################################################
 
-class SinT(L.Signal):
+class Sin(L.Signal):
     """Sine wave."""
 
     def init(self, hz):
@@ -313,7 +313,7 @@ class Hyst(L.SignalLast):
 class Tocos(L.Signal):
     """Maps 0..1 with cosine smoothing."""
 
-    def call(self, value, t):
+    def call(self, value):
         return (1 + np.cos((value - 1) * np.pi)) / 2
 
 
@@ -325,6 +325,26 @@ class Exp(L.Signal):
 
     def call(self, value):
         return value ** self.alpha
+
+
+class Norm(L.Signal):
+    """Divides signal by maximal value."""
+
+    def call(self, value):
+        m = value.max()
+        if m:
+            value /= m
+        return value
+
+
+class Mod(L.Signal):
+    """Returns the value module some base."""
+
+    def init(self, base):
+        pass
+
+    def call(self, value):
+        return value % self.base
 
 
 class Clip(L.Signal):
@@ -353,6 +373,28 @@ class ClipToMaxOfMin(L.Signal):
 
     def __repr__(self):
         return super().__repr__() + '={:.2f}'.format(self.max)
+
+
+class Apply(L.Signal):
+    """Applies a signal, for use with |-chaining."""
+
+    def init(self, signal):
+        pass
+
+    def call(self, value):
+        return self.signal(value=value)
+
+
+class F(L.Signal):
+    """Calculates a function on previous signal with optional parameters."""
+
+    def init(self, f, p1=None):
+        pass
+
+    def call(self, value):
+        if self.p1 is None:
+            return self.f(value)
+        return self.f(value, self.p1)
 
 
 # value transformation in time
