@@ -22,24 +22,105 @@ Note on testing the setup:
 2. `echo '{"midi": "0: C2 On"}' | nc -u 127.0.0.2 7000
 """
 
+from __future__ import annotations
+
 import argparse
 import asyncio
+import collections
 import functools
 import re
 import traceback
+from typing import List
 
 import rtmidi_python as rtmidi
 
 from . import util
 
 
-class Midi:
+class Note(collections.namedtuple('Note', 'port letter octave')):
+    """Represents a MIDI note on a specific port."""
 
-    COMMAND = re.compile(
-        r'(?P<port>\d+): (?P<letter>[A-G]#?)(?P<octave>-?\d+) (?P<command>.*)')
+    RE = re.compile(r'(?P<port>\d+): (?P<letter>[A-G]#?)(?P<octave>-?\d+)')
     LETTERS = (
         'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
     )
+
+    def __new__(cls, port: int, letter: str, octave: int):
+        assert port >= 0, port
+        assert letter in cls.LETTERS, letter
+        assert octave >= 0 and octave <= 8
+        return super().__new__(cls, port, letter, octave)
+
+    def __str__(self):
+        return f'{self.port}: {self.letter}{self.octave}'
+
+    @property
+    def value(self) -> int:
+        return (
+            24
+            + self.octave * 12
+            + self.LETTERS.index(self.letter)
+        )
+
+    @classmethod
+    def parse(cls, s: str) -> Note:
+        m = cls.RE.match(s)
+        if not m:
+            return None
+        return cls(
+            int(m.group('port')), m.group('letter'), int(m.group('octave')))
+
+    @classmethod
+    def from_value(cls, port: int, value: int) -> Note:
+        letter = cls.LETTERS[value % 12]
+        octave = value // 12 - 2
+        return cls(port, letter, octave)
+
+
+class Command(collections.namedtuple('Command', 'note command')):
+    """Represents a MIDI command."""
+
+    COMMANDS = (
+        'on', 'off'
+    )
+
+    def __new__(cls, note: Note, command: str):
+        assert command in cls.COMMANDS, command
+        return super().__new__(cls, note, command)
+
+    def __str__(self):
+        return f'{str(self.note)} {self.command}'
+
+    @property
+    def bytes(self) -> List[int]:
+        if self.command == 'on':
+            return [0x90, self.note.value, 100]
+        if self.command == 'off':
+            return [0x80, self.note.value, 100]
+
+    @classmethod
+    def parse(cls, s: str) -> Note:
+        idx = s.rindex(' ')
+        if idx < 0:
+            return None
+        note = Note.parse(s[:idx])
+        if note is None:
+            return None
+        cmd = s[idx + 1:]
+        if cmd not in cls.COMMANDS:
+            return None
+        return cls(note, cmd)
+
+    @classmethod
+    def from_bytes(cls, port: int, message: List[int]) -> Command:
+        note = Note.from_value(port, message[1])
+        if message[0] == 0x90:
+            return cls(note, 'on')
+        if message[0] == 0x80:
+            return cls(note, 'off')
+
+
+class Midi:
 
     def __init__(self, logger):
         """Initializes MIDI connection.
@@ -69,39 +150,16 @@ class Midi:
             logger.info(
                 'MIDI input port #%d : "%s"', port, name.decode('ascii'))
 
-    def send(self, s):
-        m = Midi.COMMAND.match(s)
-        if m is None:
-            self.logger.warning('Could not parse command: %s', s)
-            return
-        port = int(m.group('port'))
-        # C2 == 48
-        value = (
-            24
-            + int(m.group('octave')) * 12
-            + self.LETTERS.index(m.group('letter'))
-        )
-        if m.group('command') == 'on':
-            self.midi_outs[port].send_message([0x90, value, 100])
-        elif m.group('command') == 'off':
-            self.midi_outs[port].send_message([0x80, value, 100])
-        else:
-            self.logger.warning('Did not understand command: %s', s)
+    def send(self, command: Command):
+        self.midi_outs[command.note.port].send_message(command.bytes)
 
     def callback(self, port, message, timestamp):
-        if message[0] == 0x80:
-            command = 'off'
-        elif message[0] == 0x90:
-            command = 'on'
-        else:
+        command = Command.from_bytes(port, message)
+        if not command:
             self.logger.debug('Ignoring message %s', message)
             return
-        value = message[1]
-        letter = self.LETTERS[value % 12]
-        octave = value // 12 - 2
-        s = f'{port}: {letter}{octave} {command}'
         for listener in self.listeners:
-            listener(s)
+            listener(command)
 
     def add_listener(self, listener):
         self.listeners.add(listener)
@@ -118,7 +176,11 @@ class MidiProtocol:
 
     def datagram_received(self, data, addr):
         data = util.deserialize(data)
-        command = data.get('midi')
+        if 'midi' not in data:
+            return
+        command = Command.parse(data['midi'])
+        if not command:
+            self.logger.warning('Cannot parse midi command: %s', data['midi'])
         if command is not None:
             self.logger.info('Sending %s', command)
             self.midi.send(command)
@@ -168,7 +230,7 @@ class MidiForwarder:
         self.transport = transport
 
     def send(self, command):
-        msg = util.serialize(dict(midi=command))
+        msg = util.serialize(dict(midi=str(command)))
         self.transport.sendto(msg)
 
     def exception_handler(self, loop, context):
@@ -178,22 +240,22 @@ class MidiForwarder:
             ''.join(traceback.format_list(context['source_traceback'])))
 
 
-parser = argparse.ArgumentParser(description='Bridges UDP to MIDI.')
-
-parser.add_argument('--cmd_address', type=str, default='127.0.0.1',
-                    help='IP address to listen at.')
-parser.add_argument('--cmd_port', type=int, default=0,
-                    help='UDP cmd_port to listen at for commands.')
-
-parser.add_argument('--signal_address', type=str, default='127.0.0.1',
-                    help='IP address to send UDP packets to.')
-parser.add_argument('--signal_port', type=int, default=0,
-                    help='UDP signal_port to forwarad MIDI signals to.')
-
-parser.add_argument('--send', type=str, default=None,
-                    help='Send single command.')
-
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Bridges UDP to MIDI.')
+
+    parser.add_argument('--cmd_address', type=str, default='127.0.0.1',
+                        help='IP address to listen at.')
+    parser.add_argument('--cmd_port', type=int, default=0,
+                        help='UDP cmd_port to listen at for commands.')
+
+    parser.add_argument('--signal_address', type=str, default='127.0.0.1',
+                        help='IP address to send UDP packets to.')
+    parser.add_argument('--signal_port', type=int, default=0,
+                        help='UDP signal_port to forwarad MIDI signals to.')
+
+    parser.add_argument('--send', type=str, default=None,
+                        help='Send single command.')
+
     logger = util.createLogger('midi')
     args = parser.parse_args()
 

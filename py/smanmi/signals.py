@@ -3,7 +3,9 @@
 # import aubio
 import numpy as np
 
-from . import logic as L, util
+from .midi import Command, Note
+from . import logic as L
+from . import util
 
 
 settings = None
@@ -68,14 +70,17 @@ class RndPulse(L.Signal):
 
 class MidiPulse(L.Signal):
 
-    def init(self, port_letter_octave):
+    def init(self, note: Note):
         self.state = 0
 
     def call(self, midi):
-        if midi == f'{self.port_letter_octave} on':
-            self.state = 1
-        if midi == f'{self.port_letter_octave} off':
-            self.state = 0
+        if midi:
+            command = Command.parse(midi)
+            if command and command.note == self.note:
+                if command.command == 'on':
+                    self.state = 1
+                if command.command == 'off':
+                    self.state = 0
         return self.state
 
 
@@ -260,6 +265,27 @@ class Saw(L.Signal):
 
     def call(self, t):
         return ((t + self.dt) * self.hz) % 1
+
+
+class Int(L.Signal):
+    """Integrates the signal."""
+
+    def call(self, value, t):
+        if not hasattr(self, 't'):
+            self.t = t
+            self.value = 0
+        self.value += value * (t - self.t)
+        return self.value
+
+
+class Clip(L.Signal):
+    """Clamps a value between min/max."""
+
+    def init(self, min, max):
+        pass
+
+    def call(self, value):
+        return np.clip(value, self.min, self.max)
 
 
 class Lin(L.Signal):
