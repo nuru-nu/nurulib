@@ -19,9 +19,10 @@ def init(settings_):
 # state
 ###############################################################################
 
-class Smoke(L.Signal):
+class RefractoryPulse(L.Signal):
+    """Triggers a pulse with a refractory period."""
 
-    def init(self, threshold, pulse_secs, refactory_secs):
+    def init(self, threshold, pulse_secs, refractory_secs):
         self.t0 = 0
 
     def call(self, t, value):
@@ -29,12 +30,13 @@ class Smoke(L.Signal):
             return 1
         if value < self.threshold:
             return 0
-        if t - self.t0 > self.refactory_secs:
+        if t - self.t0 > self.refractory_secs:
             self.t0 = t
             return 1
 
 
 class InState(L.Signal):
+    """Evaluates to 1 iff in specified state."""
 
     def init(self, state):
         pass
@@ -44,6 +46,7 @@ class InState(L.Signal):
 
 
 class NotInState(L.Signal):
+    """Evaluates to 1 iff NOT in specified state."""
 
     def init(self, state):
         pass
@@ -52,39 +55,11 @@ class NotInState(L.Signal):
         return value * (state.state != self.state)
 
 
-class RndPulse(L.Signal):
-
-    def init(self, break_minmax):
-        self.t0 = None
-        self.wait_s = L.rnd(break_minmax)
-
-    def call(self, t):
-        if self.t0 is None:
-            self.t0 = t
-        if t - self.t0 >= self.wait_s:
-            self.t0 = t
-            self.wait_s = L.rnd(self.break_minmax)
-            return 1.
-        return 0.
-
-
-class MidiPulse(L.Signal):
-
-    def init(self, note: Note):
-        self.state = 0
-
-    def call(self, midi):
-        if midi:
-            command = Command.parse(midi)
-            if command and command.note == self.note:
-                if command.command == 'on':
-                    self.state = 1
-                if command.command == 'off':
-                    self.state = 0
-        return self.state
-
+# pulses, ramps
+###############################################################################
 
 class TriggerPulse(L.Signal):
+    """Creates a 1-pulse of duration `secs` when `state` is entered."""
 
     def init(self, state, secs):
         self.last_state = None
@@ -100,7 +75,25 @@ class TriggerPulse(L.Signal):
         return 0.
 
 
+class RndPulse(L.Signal):
+    """Emits 1-pulses after random breaks."""
+
+    def init(self, break_minmax):
+        self.t0 = None
+        self.wait_s = L.rnd(break_minmax)
+
+    def call(self, t):
+        if self.t0 is None:
+            self.t0 = t
+        if t - self.t0 >= self.wait_s:
+            self.t0 = t
+            self.wait_s = L.rnd(self.break_minmax)
+            return 1.
+        return 0.
+
+
 class RndRamp(L.Signal):
+    """Creates random ramps with duration, break, ramp in (min, max)."""
 
     def init(self, break_minmax=[1, 60], duration_minmax=[2, 5],
              ramp_minmax=[1, 2],
@@ -178,15 +171,8 @@ class Overdrive(L.Signal):
 ###############################################################################
 
 
-class WeightedAverage(L.Signal):
-
-    def call(self, features):
-        logmel = features.logmel
-        assert list(logmel.shape) == [settings.num_mel_bins]
-        return ((logmel - logmel.min()) * range(len(logmel))).mean()
-
-
 class FreqBreadth(L.Signal):
+    """Measures max - min freq where logmel > threshold."""
 
     def init(self, threshold):
         pass
@@ -205,19 +191,13 @@ class FreqBreadth(L.Signal):
         return breadth
 
 
-def hz2f(hz, n, rate=None):
-    if rate is None:
-        rate = settings.rate
-    return hz * np.pi * n / rate
-
-
 class FreqBand(L.Signal):
     """Frequency band with cosine slope. Values not normalized."""
 
-    def init(self, hzmin, hzmax, hzslope=1, n=None):
+    def init(self, fmin, fmax, df=1, n=None):
         if n is None:
             n = settings.num_mel_bins
-        fmin, fmax, df = hz2f(hzmin, n), hz2f(hzmax, n), hz2f(hzslope, n)
+
         self.kernel = np.array([
             self.f01((f + df - fmin) / df) * self.f01((fmax + df - f) / df)
             for f in range(n)
@@ -230,18 +210,29 @@ class FreqBand(L.Signal):
     def f01(self, x):
         return (1 + np.cos((np.clip(x, 0, 1) - 1) * np.pi)) / 2
 
-# value -> value
+
+# other inputs
 ###############################################################################
 
+class MidiPulse(L.Signal):
+    """Creates a 1-pulse while a MIDI note is on."""
 
-class Noop(L.Signal):
-    def init(self, dt=0):
-        self.logger = util.PrintEvery(dt)
+    def init(self, note: Note):
+        self.state = 0
 
-    def call(self, value):
-        self.logger('Noop: value={}'.format(value))
-        return value
+    def call(self, midi):
+        if midi:
+            command = Command.parse(midi)
+            if command and command.note == self.note:
+                if command.command == 'on':
+                    self.state = 1
+                if command.command == 'off':
+                    self.state = 0
+        return self.state
 
+
+# generators
+###############################################################################
 
 class SinT(L.Signal):
     """Sine wave."""
@@ -267,26 +258,22 @@ class Saw(L.Signal):
         return ((t + self.dt) * self.hz) % 1
 
 
-class Int(L.Signal):
-    """Integrates the signal."""
+# utils
+###############################################################################
 
-    def call(self, value, t):
-        if not hasattr(self, 't'):
-            self.t = t
-            self.value = 0
-        self.value += value * (t - self.t)
-        return self.value
+class Noop(L.Signal):
+    """Does not modify a signal, but can print it every dt seconds."""
 
-
-class Clip(L.Signal):
-    """Clamps a value between min/max."""
-
-    def init(self, min, max):
-        pass
+    def init(self, dt=0):
+        self.logger = util.PrintEvery(dt)
 
     def call(self, value):
-        return np.clip(value, self.min, self.max)
+        self.logger('Noop: value={}'.format(value))
+        return value
 
+
+# value transformation
+###############################################################################
 
 class Lin(L.Signal):
     """Linear transformation of scalar signal."""
@@ -301,82 +288,53 @@ class Lin(L.Signal):
         return value
 
 
-class Limiter(L.SignalLast):
-    """Ignores (keeps latest) values outside [minv..maxv]."""
+class Thr(L.Signal):
+    """Returns 1-signal if above threshold."""
 
-    def init(self, minv=0.0, maxv=1.0):
+    def init(self, th):
         pass
 
-    def call(self, value):
-        if value > self.maxv or value < self.minv:
-            return self.lastout.value
-        return value
+    def call(self, value, t):
+        return 1 * (value >= self.th)
 
 
-class MovingAverage(L.Signal):
+class Hyst(L.SignalLast):
 
-    def init(self, n=None, secs=None):
-        assert n or secs and not (n and secs)
-        if secs:
-            n = int(secs // settings.hop_secs)
-        self.buf = np.zeros(n)
-        self.i = 0
+    def init(self, up_th, down_th):
+        pass
 
-    def call(self, value):
-        if self.n == 0:
-            return value
-        self.buf[self.i % len(self.buf)] = value
-        self.i += 1
-        return self.buf.mean()
+    def call(self, t, value):
+        if self.lastout.value > 0:
+            return 1 * (value >= self.down_th)
+        else:
+            return 1 * (value >= self.up_th)
 
 
-class Exponential(L.SignalLast):
-    """Exponential smoothing (alpha=0 disables)."""
+class Tocos(L.Signal):
+    """Maps 0..1 with cosine smoothing."""
+
+    def call(self, value, t):
+        return (1 + np.cos((value - 1) * np.pi)) / 2
+
+
+class Exp(L.Signal):
+    """Exponentiates the signal."""
 
     def init(self, alpha):
         pass
 
     def call(self, value):
-        return self.lastout.value + (
-            value - self.lastout.value) * (1 - self.alpha)
-
-
-class Median(L.Signal):
-    """To be used with e.g. a ML detector."""
-
-    def init(self, n, threshold):
-        self.buf = np.zeros(n, dtype='float32')
-        self.i = 0
-
-    def call(self, value):
-        self.buf[self.i % len(self.buf)] = value
-        self.i += 1
-        x = np.median(self.buf)
-        if self.threshold:
-            x = 1. * (x > self.threshold)
-        return x
-
-
-class Hamming(L.Signal):
-
-    def init(self, n):
-        self.w = np.hamming(n)
-        self.w /= self.w.sum()
-        self.buf = np.zeros(n)
-
-    def call(self, value):
-        self.buf[0] = value
-        self.buf = np.roll(self.buf, shift=1)
-        return (self.buf * self.w).sum()
+        return value ** self.alpha
 
 
 class Clip(L.Signal):
+    """Clamps a value between min/max."""
 
-    def __init__(self, amin=0, amax=1):
-        super().__init__(amin=amin, amax=amax)
+    def init(self, min: int = 0, max: int = 1):
+        pass
 
     def call(self, value):
-        return np.clip(value, self.amin, self.amax)
+        return np.clip(value, self.min, self.max)
 
 
 class ClipToMaxOfMin(L.Signal):
@@ -397,7 +355,84 @@ class ClipToMaxOfMin(L.Signal):
         return super().__repr__() + '={:.2f}'.format(self.max)
 
 
-class Ramp(L.SignalLast):
+# value transformation in time
+###############################################################################
+
+class Int(L.Signal):
+    """Integrates the signal."""
+
+    def init(self, min: int = 0, max: int = 1):
+        self.t = self.value = 0
+
+    def call(self, value, t):
+        if self.t:
+            self.value = np.clip(
+                self.value + value * (t - self.t), self.min, self.max)
+        self.t = t
+        return self.value
+
+
+class MovingAverage(L.Signal):
+    """Keeps a moving average over `n` samples or `secs` seconds."""
+
+    def init(self, n=None, secs=None):
+        assert n or secs and not (n and secs)
+        if secs:
+            n = int(secs // settings.hop_secs)
+        self.buf = np.zeros(n)
+        self.i = 0
+
+    def call(self, value):
+        if self.n == 0:
+            return value
+        self.buf[self.i % len(self.buf)] = value
+        self.i += 1
+        return self.buf.mean()
+
+
+class Exponential(L.SignalLast):
+    """Exponential follower."""
+
+    def init(self, alpha):
+        pass
+
+    def call(self, value):
+        return self.lastout.value + (
+            value - self.lastout.value) * (1 - self.alpha)
+
+
+class Median(L.Signal):
+    """Returns 1-value if median of last n samples is > threshold."""
+
+    def init(self, n, threshold):
+        self.buf = np.zeros(n, dtype='float32')
+        self.i = 0
+
+    def call(self, value):
+        self.buf[self.i % len(self.buf)] = value
+        self.i += 1
+        x = np.median(self.buf)
+        if self.threshold:
+            x = 1. * (x > self.threshold)
+        return x
+
+
+class Hamming(L.Signal):
+    """Applies a hamming over `n` samples."""
+
+    def init(self, n):
+        self.w = np.hamming(n)
+        self.w /= self.w.sum()
+        self.buf = np.zeros(n)
+
+    def call(self, value):
+        self.buf[0] = value
+        self.buf = np.roll(self.buf, shift=1)
+        return (self.buf * self.w).sum()
+
+
+class ClampSlope(L.SignalLast):
+    """Follows signal with maximum dvalue/dt."""
 
     def init(self, up_s, down_s):
         """`up_s` is dvalue/ds when going up (the larger the faster)."""
@@ -410,39 +445,3 @@ class Ramp(L.SignalLast):
         elif value < self.lastout.value:
             return np.clip(self.lastout.value - dt * self.down_s, 0, 1)
         return value
-
-
-class Hyst(L.SignalLast):
-
-    def init(self, up_th, down_th):
-        pass
-
-    def call(self, t, value):
-        if self.lastout.value > 0:
-            return 1 * (value >= self.down_th)
-        else:
-            return 1 * (value >= self.up_th)
-
-
-class Tocos(L.Signal):
-
-    def call(self, value, t):
-        return (1 + np.cos((value - 1) * np.pi)) / 2
-
-
-class Thr(L.Signal):
-
-    def init(self, th):
-        pass
-
-    def call(self, value, t):
-        return 1 * (value >= self.th)
-
-
-class Exp(L.Signal):
-
-    def init(self, alpha):
-        pass
-
-    def call(self, value):
-        return value ** self.alpha
