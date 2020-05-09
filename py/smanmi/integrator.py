@@ -52,7 +52,7 @@ class IntegrationServer:
     in turn call `send()` when "enough" signals are accumulated.
     """
 
-    def __init__(self, logger, address,
+    def __init__(self, logger,
                  sig_in_ports, sig_out_ports,
                  cmd_in_ports, cmd_out_ports):
         """Initializes the serverr -- call `start()` to start.
@@ -69,7 +69,7 @@ class IntegrationServer:
           address : default address for UDP packets
         """
         self.logger = logger
-        self.address = address
+        self.address = '127.0.0.1'
         self.sig_in_ports = sig_in_ports
         self.sig_out_ports = sig_out_ports
         self.cmd_in_ports = cmd_in_ports
