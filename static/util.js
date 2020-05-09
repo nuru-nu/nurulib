@@ -169,7 +169,7 @@ export const ui = (() => {
 
   const toggle = (name, initial) => {
     let value = initial || false
-    const button = h.button().of(name).el
+    const button = h.button(initial && '.on').of(name).el
     button.name = name
     const update = updater(button, initial)
     button.addEventListener('click', () => {
