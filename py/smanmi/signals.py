@@ -55,6 +55,16 @@ class NotInState(L.Signal):
         return value * (state.state != self.state)
 
 
+class Valence(L.Signal):
+    def call(self, css):
+        return css[0]
+
+
+class Arousal(L.Signal):
+    def call(self, css):
+        return css[1]
+
+
 # pulses, ramps
 ###############################################################################
 
@@ -234,28 +244,21 @@ class MidiPulse(L.Signal):
 # generators
 ###############################################################################
 
-class Sin(L.Signal):
-    """Sine wave."""
-
-    def init(self, hz):
-        self.last_t = 0
-        self.last_wt = 0
-
-    def call(self, t):
-        dt = t - self.last_t
-        self.last_t += dt
-        self.last_wt += 2 * np.pi * self.hz * dt
-        return np.sin(self.last_wt)
-
 
 class Saw(L.Signal):
-    """Sawtooth wave."""
+    """Sawtooth wave.
 
-    def init(self, hz, dt):
-        pass
+    Note : Use with `| S.Tocos()` to generate smooth waves.
+    """
+
+    def init(self, hz):
+        self.value = self.lt = 0
 
     def call(self, t):
-        return ((t + self.dt) * self.hz) % 1
+        dt = t - self.lt
+        self.lt = t
+        self.value += dt * self.hz
+        return self.value % 1
 
 
 # utils
@@ -276,7 +279,7 @@ class Noop(L.Signal):
 ###############################################################################
 
 class Lin(L.Signal):
-    """Linear transformation of scalar signal."""
+    """Linear transformation of scalar signal : x => x * mult + shift."""
 
     def init(self, shift=0, mult=1, mod=None):
         pass
