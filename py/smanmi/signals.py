@@ -231,6 +231,22 @@ class MidiPulse(L.Signal):
         return self.state
 
 
+class MidiSwitch(L.Signal):
+    """Flips 0<->1 with every received note"""
+
+    def init(self, note: Note):
+        assert isinstance(note, Note)
+        self.state = 0.
+
+    def call(self, midi):
+        if midi:
+            command = Command.parse(midi)
+            if command and command.note == self.note:
+                if command.command == 'on':
+                    self.state = 1 - self.state
+        return self.state
+
+
 # generators
 ###############################################################################
 
@@ -253,6 +269,13 @@ class Saw(L.Signal):
 
 # utils
 ###############################################################################
+
+class T(L.Signal):
+    """Returns transpoed."""
+
+    def call(self, value):
+        return value.T
+
 
 class ElementAt(L.Signal):
     """Returns the idx-th element from a list signal."""
