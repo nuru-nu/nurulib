@@ -156,8 +156,9 @@ class Midi:
     def callback(self, port, message, timestamp):
         command = Command.from_bytes(port, message)
         if not command:
-            self.logger.debug('Ignoring message %s', message)
+            self.logger.info('Ignoring message %s', message)
             return
+        self.logger.info('Received %s', command)
         for listener in self.listeners:
             listener(command)
 
