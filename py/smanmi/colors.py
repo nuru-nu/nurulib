@@ -49,6 +49,35 @@ class Palette(L.Signal):
         return self.lookup[(np.clip(value, 0, 1) * (self.n - 1)).astype(int)]
 
 
+class InterpolPalette(L.Signal):
+    """Interpolates between palettes based on control value valence."""
+
+    def init(self, value, palettes):
+        """Palettes is iterable of (value, palette)."""
+        lvalue = None
+        assert palettes
+        self.ps = []
+        for i, (value, palette) in enumerate(palettes):
+            if lvalue is not None:
+                assert lvalue < value, i
+            if not isinstance(palette, Palette):
+                palette = Palette(palette)
+            self.ps.append((value, palette))
+        self.vmin = self.ps[0][0]
+        self.vmax = self.ps[-1][0]
+        self.p0 = self.p1 = self.v0 = self.v1 = None
+
+    def call(self, value):
+        v = np.clip(self.value, self.vmin, self.vmax)
+        if self.v0 is None or v < self.v0 or v > self.v1:
+            for (self.v0, self.p0), (self.v1, self.p1) in zip(
+                    self.ps[:-1], self.ps[1:]):
+                if v > self.v0 and v <= self.v1:
+                    break
+        x = (v - self.v0) / (self.v1 - self.v0)
+        return self.p0(value=value) * (1 - x) + self.p1(value=value) * x
+
+
 class StatePalette(L.Signal):
     """Chooses a Palette based on `state.color`."""
 

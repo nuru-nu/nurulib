@@ -55,16 +55,6 @@ class NotInState(L.Signal):
         return value * (state.state != self.state)
 
 
-class Valence(L.Signal):
-    def call(self, css):
-        return css[0]
-
-
-class Arousal(L.Signal):
-    def call(self, css):
-        return css[1]
-
-
 # pulses, ramps
 ###############################################################################
 
@@ -263,6 +253,16 @@ class Saw(L.Signal):
 
 # utils
 ###############################################################################
+
+class ElementAt(L.Signal):
+    """Returns the idx-th element from a list signal."""
+
+    def init(self, idx):
+        pass
+
+    def call(self, value):
+        return value[self.idx]
+
 
 class Noop(L.Signal):
     """Does not modify a signal, but can print it every dt seconds."""
