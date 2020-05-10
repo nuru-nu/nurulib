@@ -23,6 +23,8 @@ import functools
 import inspect
 import random
 
+import numpy as np
+
 # utils
 ###############################################################################
 
@@ -126,6 +128,8 @@ class Signal:
             raise MissingInputsException(
                 f'Signal {self!r} is missing inputs {missing}')
         kw = {k: allkw[k] for k in self.callkws}
+        if inspect.getfullargspec(self.call).varkw:
+            kw = allkw
         return self.call(**kw)
 
     def __repr__(self):
@@ -198,9 +202,9 @@ class SignalMult(SignalChain):
     def __call__(self, **kw):
         value1 = self.sig1(**kw)
         value2 = self.sig2(**kw)
-        if value1.shape == value2.shape:
+        if np.ndim(value1) == 0 or np.ndim(value2) == 0:
             return value1 * value2
-        if value1.shape == () or value2.shape == ():
+        if value1.shape == value2.shape:
             return value1 * value2
         # Handy hack for animations.
         assert len(value1.shape) == 1, value1.shape
