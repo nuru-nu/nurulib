@@ -31,6 +31,7 @@ import functools
 import re
 import traceback
 from typing import List
+from typing import Optional
 
 import rtmidi_python as rtmidi
 
@@ -48,7 +49,7 @@ class Note(collections.namedtuple('Note', 'port letter octave')):
     def __new__(cls, port: int, letter: str, octave: int):
         assert port >= 0, port
         assert letter in cls.LETTERS, letter
-        assert octave >= 0 and octave <= 8
+        assert octave >= -2 and octave <= 8, octave
         return super().__new__(cls, port, letter, octave)
 
     def __str__(self):
@@ -77,22 +78,61 @@ class Note(collections.namedtuple('Note', 'port letter octave')):
         return cls(port, letter, octave)
 
 
-class Command(collections.namedtuple('Command', 'note command')):
+class Controller(collections.namedtuple('Controller', 'port number value')):
+    """Represents a continuous MIDI controller value."""
+
+    RE = re.compile(r'(?P<port>\d+): X(?P<number>\d+)=(?P<value>\d+)')
+
+    def __new__(cls, port: int, number: int, value: int):
+        assert port >= 0, port
+        assert number >= 0 and number <= 119, number
+        assert value >= 0 and value <= 127
+        return super().__new__(cls, port, number, value)
+
+    def __str__(self):
+        return f'{self.port}: X{self.number}={self.value}'
+
+    @classmethod
+    def parse(cls, s: str) -> Controller:
+        m = cls.RE.match(s)
+        if not m:
+            return None
+        print(m.groups())
+        return cls(
+            int(m.group('port')), int(m.group('number')), int(m.group('value'))
+        )
+
+
+# TODO clean up this mess !
+class Command(collections.namedtuple('Command', 'note command controller')):
     """Represents a MIDI command."""
 
     COMMANDS = (
         'on', 'off'
     )
 
-    def __new__(cls, note: Note, command: str):
-        assert command in cls.COMMANDS, command
-        return super().__new__(cls, note, command)
+    def __new__(cls, port: int, note: Optional[Note] = None,
+                command: Optional[str] = None,
+                controller: Optional[Controller] = None):
+        if note:
+            assert command in cls.COMMANDS, command
+            assert not controller, controller
+            assert port == note.port, (port, note.port)
+            return super().__new__(cls, note, command, None)
+        assert controller, controller
+        assert port == controller.port, (port, controller.port)
+        return super().__new__(cls, None, None, controller)
 
     def __str__(self):
-        return f'{str(self.note)} {self.command}'
+        if self.note:
+            return f'{str(self.note)} {self.command}'
+        else:
+            return str(self.controller)
 
     @property
     def bytes(self) -> List[int]:
+        if self.controller:
+            return [0xA0, self.controller.number, self.controller.value]
         if self.command == 'on':
             return [0x90, self.note.value, 100]
         if self.command == 'off':
@@ -100,6 +140,9 @@ class Command(collections.namedtuple('Command', 'note command')):
 
     @classmethod
     def parse(cls, s: str) -> Note:
+        controller = Controller.parse(s)
+        if controller:
+            return cls(port=controller.port, controller=controller)
         idx = s.rindex(' ')
         if idx < 0:
             return None
@@ -113,11 +156,13 @@ class Command(collections.namedtuple('Command', 'note command')):
 
     @classmethod
     def from_bytes(cls, port: int, message: List[int]) -> Command:
+        if message[0] == 0xA0:
+            return cls(port, controller=Controller(port, *message[1:]))
         note = Note.from_value(port, message[1])
         if message[0] == 0x90:
-            return cls(note, 'on')
+            return cls(note=note, command='on')
         if message[0] == 0x80:
-            return cls(note, 'off')
+            return cls(note=note, command='off')
 
 
 class Midi:
