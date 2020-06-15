@@ -152,7 +152,7 @@ class Command(collections.namedtuple('Command', 'note command controller')):
         cmd = s[idx + 1:]
         if cmd not in cls.COMMANDS:
             return None
-        return cls(note, cmd)
+        return cls(port=note.port, note=note, command=cmd)
 
     @classmethod
     def from_bytes(cls, port: int, message: List[int]) -> Command:
@@ -160,9 +160,9 @@ class Command(collections.namedtuple('Command', 'note command controller')):
             return cls(port, controller=Controller(port, *message[1:]))
         note = Note.from_value(port, message[1])
         if message[0] == 0x90:
-            return cls(note=note, command='on')
+            return cls(port=note.port, note=note, command='on')
         if message[0] == 0x80:
-            return cls(note=note, command='off')
+            return cls(port=note.port, note=note, command='off')
 
 
 class Midi:
