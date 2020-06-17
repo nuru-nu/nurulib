@@ -167,13 +167,15 @@ class Command(collections.namedtuple('Command', 'note command controller')):
 
 class Midi:
 
-    def __init__(self, logger):
+    def __init__(self, logger, echo=False):
         """Initializes MIDI connection.
 
         Args:
           logger: Logger for logging output.
         """
         self.logger = logger
+        self.echo = echo
+        self.sent = set()
         self.listeners = set()
 
         midi = rtmidi.MidiOut(b'smanmi')
@@ -196,10 +198,15 @@ class Midi:
                 'MIDI input port #%d : "%s"', port, name.decode('ascii'))
 
     def send(self, command: Command):
+        self.sent.add(command)
         self.midi_outs[command.note.port].send_message(command.bytes)
 
     def callback(self, port, message, timestamp):
         command = Command.from_bytes(port, message)
+        if command in self.sent:
+            self.sent.remove(command)
+            if not self.echo:
+                return
         if not command:
             self.logger.info('Ignoring message %s', message)
             return
@@ -211,34 +218,35 @@ class Midi:
         self.listeners.add(listener)
 
 
-class MidiProtocol:
+class UdpInbound:
 
-    def __init__(self, midi, logger):
-        self.midi = midi
+    def __init__(self, midi_forwarder, logger):
+        self.midi_forwarder = midi_forwarder
         self.logger = logger
 
     def connection_made(self, transport):
         self.transport = transport
 
     def datagram_received(self, data, addr):
-        data = util.deserialize(data)
-        if 'midi' not in data:
-            return
-        command = Command.parse(data['midi'])
-        if not command:
-            self.logger.warning('Cannot parse midi command: %s', data['midi'])
-        if command is not None:
-            self.logger.info('Sending %s', command)
-            self.midi.send(command)
+        self.midi_forwarder.datagram_received(data)
 
-
-class UdpProtocol(asyncio.DatagramProtocol):
+class UdpOutbound(asyncio.DatagramProtocol):
 
     def __init__(self, midi_forwarder):
         self.midi_forwarder = midi_forwarder
 
     def connection_made(self, transport):
         self.midi_forwarder.register_transport(transport)
+
+
+def signal2midi(data):
+    if 'midi' in data:
+        command = Command.parse(data['midi'])
+        if command:
+            return (command,)
+        else:
+            self.logger.warning('Cannot parse midi command: %s', data['midi'])
+    return ()
 
 
 class MidiForwarder:
@@ -248,7 +256,12 @@ class MidiForwarder:
         self.signal_address, self.signal_port = signal_address_port
         self.logger = logger
         self.midi = midi
+        self.midi.add_listener(self.send)
         self.transport = None
+        self.signal2midis = {signal2midi}
+
+    def register_signal2midi(self, signal2midi):
+        self.signal2midis.add(signal2midi)
 
     def start(self):
         loop = asyncio.get_event_loop()
@@ -259,13 +272,13 @@ class MidiForwarder:
                 'Listening on %s:%d', self.cmd_address, self.cmd_port)
             loop.run_until_complete(
                 loop.create_datagram_endpoint(
-                    lambda: MidiProtocol(self.midi, self.logger),
+                    lambda: UdpInbound(self, self.logger),
                     local_addr=(self.cmd_address, self.cmd_port)))
         if self.signal_port:
             self.logger.info(
                 'Sending UDP to %s:%d', self.signal_address, self.signal_port)
             loop.run_until_complete(loop.create_datagram_endpoint(
-                lambda: UdpProtocol(self),
+                lambda: UdpOutbound(self),
                 remote_addr=(self.signal_address, self.signal_port)))
         loop.run_forever()
 
@@ -273,6 +286,13 @@ class MidiForwarder:
         if self.transport is not None:
             self.logger.warning('Reregistering transport')
         self.transport = transport
+
+    def datagram_received(self, data):
+        data = util.deserialize(data)
+        for signal2midi in self.signal2midis:
+            for command in signal2midi(data):
+                self.logger.info('Sending %s', command)
+                self.midi.send(command)
 
     def send(self, command):
         msg = util.serialize(dict(midi=str(command)))
