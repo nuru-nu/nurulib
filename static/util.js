@@ -182,11 +182,17 @@ export const ui = (() => {
 
   function v() { return h.div().of(Array.from(arguments)) }
   function h_() { return h.div({class: 'flex'}).of(Array.from(arguments)) }
+  function hw() {
+    const ret = h_.apply(null, arguments)
+    ret.el.style.flexWrap = 'wrap'
+    return ret
+  }
 
   return {
     choice,
     dropdown,
     h: h_,
+    hw,
     toggle,
     v,
   }
