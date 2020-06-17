@@ -88,8 +88,8 @@ export const Network = (output, options) => {
     return this.listen(key, listener)
   }
 
-  function sender(d) {
-    console.log('>>>', d)
+  function sender(d, silent) {
+    if (!silent) console.log('>>>', d)
     socks.signals.send(JSON.stringify(d))
   }
 
