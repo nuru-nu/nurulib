@@ -248,7 +248,6 @@ class MidiForwarder:
         self.signal_address, self.signal_port = signal_address_port
         self.logger = logger
         self.midi = midi
-        self.midi.add_listener(self.send)
         self.transport = None
 
     def start(self):
