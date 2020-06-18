@@ -75,6 +75,7 @@ class Server:
         self.websockets = {}
         self.transports = {}
         self.routes = []
+        self.key_counter = util.KeyCounter()
 
     def forward_udp(self, udp_forwarding):
         assert udp_forwarding.websocket_path not in self.udp_forwardings
@@ -104,18 +105,32 @@ class Server:
         else:
             function_or_coroutine(*args, **kwargs)
 
+    def log_signals(self, websocket_path, msg):
+        data = util.deserialize(msg)
+        self.key_counter(data)
+        data2 = {}
+        for k, v in data.items():
+            if self.key_counter.counts[k] < 5:
+                data2[k] = v
+            elif self.key_counter.counts[k] == 5:
+                self.logger.warning('Temporarily ignoring too frequent: %s', k)
+        if not data2:
+            return False
+        self.logger.info('%s, received signal: %s', websocket_path, data2)
+        return True
+
     async def websocket_loop(self, websocket_path, ws):
         async for msg in ws:
             try:
                 if msg.type == WSMsgType.TEXT:
-                    self.logger.info(
-                        '%s, received signal: %s', websocket_path, msg.data)
+                    should_log = self.log_signals(websocket_path, msg.data)
                     udp_forwarding = self.udp_forwardings.get(websocket_path)
                     if udp_forwarding and udp_forwarding.out_udp:
                         for transport in self.transports[websocket_path]:
                             if not transport.is_closing():
-                                self.logger.info(
-                                    'sending to %s', udp_forwarding.out_udp)
+                                if should_log:
+                                    self.logger.info(
+                                        'sending to %s', udp_forwarding.out_udp)
                                 transport.sendto(msg.data.encode('utf8'))
                     if udp_forwarding and udp_forwarding.out_callback:
                         self.call_create_task(
