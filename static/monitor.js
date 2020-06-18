@@ -4,6 +4,7 @@ export const Monitor = (output, { presets }) => {
 
   let signals = null
 
+  const grid = {ms: 100, dy: 0.1}
   const width=600, height=128, speed=3, lw=1
 
   presets = presets || {}
@@ -32,7 +33,7 @@ export const Monitor = (output, { presets }) => {
 
   const ctx = disp.graph.getContext('2d')
 
-  let t=-1, lastys={}
+  let t=-1, lastys={}, gt = 0
   const nolines = new Set(['logmel', 'mfccs', 't', 'signalin'])
   const text_sigs = new Set(['state', 'position'])
   function listener(data) {
@@ -41,6 +42,13 @@ export const Monitor = (output, { presets }) => {
     if (signals.state.indexOf('frozen') !== -1) {
       disp.text_sigs.textContent = signals.state
       return
+    }
+    if (Date.now() - gt > grid.ms) {
+      gt = Date.now()
+      for(let y = grid.dy; y < 1; y += grid.dy) {
+        ctx.fillStyle = '#0f0'
+        ctx.fillRect(width - 2, height * y, 1, 1)
+      }
     }
     const img = ctx.getImageData(speed, 0, width - speed - 1, height)
     ctx.putImageData(img, 0, 0);
