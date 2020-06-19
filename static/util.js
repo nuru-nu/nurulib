@@ -385,7 +385,7 @@ export const Lines = function(output) {
 export const Console = function(output) {
   const console = window.console
 
-  const disp = h.div('.hide-scroll').of(h.div('console')).into(output).els
+  const disp = h.div('.scrollable').of(h.div('console')).into(output).els
 
   function clear() {
     while (disp.console.firstChild) {
