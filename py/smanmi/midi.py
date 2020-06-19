@@ -239,14 +239,18 @@ class UdpOutbound(asyncio.DatagramProtocol):
         self.midi_forwarder.register_transport(transport)
 
 
-def signal2midi(data):
+def signal2midi(data, logger):
     if 'midi' in data:
         command = Command.parse(data['midi'])
         if command:
             return (command,)
         else:
-            self.logger.warning('Cannot parse midi command: %s', data['midi'])
+            logger.warning('Cannot parse midi command: %s', data['midi'])
     return ()
+
+
+def midi2signal(command, logger):
+    return (dict(midi=str(command)),)
 
 
 class MidiForwarder:
@@ -256,12 +260,10 @@ class MidiForwarder:
         self.signal_address, self.signal_port = signal_address_port
         self.logger = logger
         self.midi = midi
-        self.midi.add_listener(self.send)
+        self.midi.add_listener(self.got_midi)
         self.transport = None
         self.signal2midis = {signal2midi}
-
-    def register_signal2midi(self, signal2midi):
-        self.signal2midis.add(signal2midi)
+        self.midi2signals = {midi2signal}
 
     def start(self):
         loop = asyncio.get_event_loop()
@@ -290,13 +292,14 @@ class MidiForwarder:
     def datagram_received(self, data):
         data = util.deserialize(data)
         for signal2midi in self.signal2midis:
-            for command in signal2midi(data):
+            for command in signal2midi(data, self.logger):
                 self.logger.info('Sending %s', command)
                 self.midi.send(command)
 
-    def send(self, command):
-        msg = util.serialize(dict(midi=str(command)))
-        self.transport.sendto(msg)
+    def got_midi(self, command):
+        for midi2signal in self.midi2signals:
+            for data in midi2signal(command, self.logger):
+                self.transport.sendto(util.serialize(data))
 
     def exception_handler(self, loop, context):
         self.logger.error(

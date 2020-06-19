@@ -214,20 +214,18 @@ class FreqBand(L.Signal):
 # other inputs
 ###############################################################################
 
-class MidiPulse(L.Signal):
-    """Creates a 1-pulse while a MIDI note is on."""
+class TransientPulse(L.Signal):
+    """Creates a pulse based on a transient on/off signal."""
 
-    def init(self, note: Note):
+    def init(self, transient_name: str, signal_name: str):
         self.state = 0
 
-    def call(self, midi):
-        if midi:
-            command = Command.parse(midi)
-            if command and command.note == self.note:
-                if command.command == 'on':
-                    self.state = 1
-                if command.command == 'off':
-                    self.state = 0
+    def call(self, **signals):
+        transient = signals.get(self.transient_name)
+        if transient == f'{self.signal_name} on':
+            self.state = 1
+        elif transient == f'{self.signal_name} off':
+            self.state = 0
         return self.state
 
 
