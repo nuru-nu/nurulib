@@ -7,6 +7,8 @@ from .midi import Command, Note
 from . import logic as L
 from . import util
 
+# pylint: disable=no-member
+
 
 settings = None
 
@@ -248,7 +250,6 @@ class MidiSwitch(L.Signal):
 # generators
 ###############################################################################
 
-
 class Saw(L.Signal):
     """Sawtooth wave.
 
@@ -265,6 +266,19 @@ class Saw(L.Signal):
         return self.value % 1
 
 
+# kinect
+###############################################################################
+
+class KinectDistance(L.Signal):
+    """Returns array of distances."""
+
+    def call(self, people):
+        return [
+            (p['cm'][0] ** 2 + p['cm'][1] ** 2) ** .5
+            for p in people
+        ]
+
+
 # utils
 ###############################################################################
 
@@ -273,6 +287,26 @@ class T(L.Signal):
 
     def call(self, value):
         return value.T
+
+
+class Length(L.Signal):
+    """Returns length of array"""
+
+    def init(self):
+        pass
+
+    def call(self, value):
+        return len(value)
+
+
+class Min(L.Signal):
+    """Returns minimum value of array, or default."""
+
+    def init(self, default=None):
+        pass
+
+    def call(self, value):
+        return min(value) if value else self.default
 
 
 class ElementAt(L.Signal):
