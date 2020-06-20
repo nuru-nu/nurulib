@@ -1,8 +1,11 @@
 
-// Not so painful HTML generation.
-// let stuff = h.div('.outer').of(h.div('first .row'), div('second .row'))
-// stuff.into(document.getElementById('output'))
-// stuff.els.first.addEventListener('click', ...)
+// Not so painful HTML generation:
+// let els = h.div('.outer').of(
+//   h.div('first .row'),
+//   buttons.map(text => h.button(text).of(text))
+// ).into('#output').els
+// els[buttons[0]].addEventListener('click', ...)
+// ... see also `ui` below ...
 export const h = (function() {
   function isNode(x) {
     return x instanceof HTMLElement
@@ -108,7 +111,7 @@ export const h = (function() {
   let ns = {}
   let tags = [
     'a', 'div', 'span', 'button', 'pre', 'canvas', 'br',
-    'input', 'label', 'select', 'option'
+    'input', 'label', 'select', 'option', 'table', 'tr', 'td',
   ]
   tags.forEach(tag => {
     ns[tag] = function() {
@@ -279,107 +282,6 @@ export const colors = function() {
     strong_palette,
   }
 }()
-
-// Manages checkboxes and graph line styles.
-export const Lines = function(output) {
-
-  const palette = colors.strong_palette
-  let available = Array.from(palette)
-  let cols_i = 0
-
-  let lines = {}
-
-  function set_color(sig, color) {
-    lines[sig].color = color
-    lines[sig].t = new Date().getTime()
-    lines[sig].label.style.backgroundColor = color
-    lines[sig].label.style.color = 'black'
-    lines[sig].checkbox.checked = true
-  }
-
-  function set_next_color(sig) {
-    if (lines[sig].t) {
-      return
-    }
-    if (!available.length) {
-      // switch with oldest color
-      let oldest=null, min_t=new Date().getTime()
-      u.sorted(Object.keys(lines)).forEach(sig => {
-        if (lines[sig].t < min_t) {
-          min_t = lines[sig].t
-          oldest = sig
-        }
-      })
-      remove_color(oldest)
-    }
-    set_color(sig, available.shift())
-  }
-
-  function remove_color(sig) {
-    if (!sig || !lines[sig].t) {
-      return
-    }
-    delete lines[sig].t
-    available.unshift(lines[sig].color)
-    delete lines[sig].color
-    lines[sig].label.style = {}
-    lines[sig].checkbox.checked = false
-  }
-
-  function sort(cont) {
-    const arr = []
-    for (let i = 0; i < cont.children.length; i++) {
-      arr.push([cont.children[i].children[1].textContent, cont.children[i]])
-    }
-    // const arr = Array.from(cont.children).forEach(child => [
-    //   child.querySelector('label').textContent, child])
-    arr.sort()
-    while (cont.firstChild) cont.removeChild(cont.firstChild)
-    arr.forEach(text_child => cont.appendChild(text_child[1]))
-  }
-
-  function get(sig, t, preset) {
-    if (!lines.hasOwnProperty(sig)) {
-      const n = Object.keys(lines).length
-      const els = h.span().of(
-        h.input(`checkbox #line_${sig}`, {type: 'checkbox'}),
-        h.label('label', {for: `line_${sig}`}).of(sig),
-        ' ',
-      ).into(output).els
-      sort(output)
-      lines[sig] = { ...els, color: null }
-      if (preset && preset.has(sig)) {
-        set_next_color(sig)
-      }
-      lines[sig].checkbox.addEventListener('change', function() {
-        if (this.checked) {
-          set_next_color(sig)
-        } else {
-          remove_color(sig)
-        }
-      })
-    }
-    return lines[sig].color
-  }
-
-  function set(preset) {
-    const sigs = u.sorted(Object.keys(lines))
-    sigs.forEach(sig => {
-      remove_color(sig)
-    })
-    available = Array.from(palette)
-    sigs.forEach(sig => {
-      if (preset.has(sig)) {
-        set_next_color(sig)
-      }
-    })
-  }
-
-  return {
-    get,
-    set,
-  }
-}
 
 // for replacing window.console
 export const Console = function(output) {

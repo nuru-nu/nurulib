@@ -42,6 +42,13 @@ button {
 #monitor input[type="checkbox"] {
   display: none;
 }
+#monitor label {
+  margin-left: 0.5em;
+}
+#monitor table.lines td {
+  border: 0;
+}
+#monitor .notyet { color: #080; }
 
 input[type="text"] {
   outline: 0;

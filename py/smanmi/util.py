@@ -152,6 +152,8 @@ def pythonize(d):
         return float(d)
     if isinstance(d, np.int64):
         return int(d)
+    if isinstance(d, collections.abc.KeysView):
+        return list(d)
     return d
 
 
