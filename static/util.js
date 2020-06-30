@@ -262,6 +262,11 @@ export const colors = function() {
     '#0000ff', '#ff0000', '#ffff00', '#00ffff', '#ff00ff', '#00ff00',
     '#ffffff',
   ]
+  const user_colors = [
+    '#0000ff', '#00ff00', '#ff0000', '#00ffff', '#ffff00', '#ff00ff',
+    '#c0c0c0', '#808080', '#000080', '#008080', '#008000', '#800080',
+    '#808000', '#800000'
+  ]
 
   return {
     hex2,
@@ -271,6 +276,7 @@ export const colors = function() {
     palette1,
     palette2,
     strong_palette,
+    user_colors,
   }
 }()
 
