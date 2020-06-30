@@ -117,3 +117,6 @@ class DmxController:
             if self.lastas.get(universe) == a:
                 continue
             self.client.SendDmx(universe, a, lambda state: self.wrapper.Stop())
+            # this should work with DMXEnttecPro
+            # self.client.set_channel(universe, a)
+            # self.client.submit() 
