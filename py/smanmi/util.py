@@ -152,6 +152,8 @@ def pythonize(d):
         return float(d)
     if isinstance(d, np.int64):
         return int(d)
+    if isinstance(d, collections.abc.KeysView):
+        return list(d)
     return d
 
 
@@ -165,7 +167,9 @@ def serialize(signals):
 
 def deserialize(msg):
     """Does the opposite of `serialize()`."""
-    signals = json.loads(msg.decode('utf8'))
+    if isinstance(msg, bytes):
+        msg = msg.decode('utf8')
+    signals = json.loads(msg)
     for name, cls in serializers.items():
         if name in signals:
             signals[name] = cls(signals[name])
@@ -354,3 +358,23 @@ def pad_fadecandy(values):
 
 def now():
     return datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+
+
+class KeyCounter:
+    """Counts occurences of data keys in sliding window."""
+
+    def __init__(self, secs=1):
+        self.secs = secs
+        self.counts = collections.defaultdict(int)
+        self.events = collections.deque()
+
+    def __call__(self, data):
+        if not isinstance(data, dict):
+            data = deserialize(data)
+        t = time.time()
+        for key in data:
+            self.counts[key] += 1
+            self.events.append((t, key))
+        while self.events and self.events[0][0] < t - self.secs:
+            _, key = self.events.popleft()
+            self.counts[key] -= 1

@@ -1,46 +1,57 @@
-import { h, ui, u, colors, Lines } from './util.js'
+import { h, ui, u, colors } from './util.js'
 
-export const Monitor = (output, { presets }) => {
+// Shows signals; monitor_def = {
+//     graphs: {
+//       group1: [sig1, ...],
+//       ...
+//     },
+//     features: {
+//       numbers: [sig2, ...],
+//     },
+//     hidden: [sig3, ...],
+// }
+export const Monitor = (output, { monitor_def }) => {
 
   let signals = null
 
+  const { graphs, features } = monitor_def
+  const grid = {ms: 100, dy: 0.1}
   const width=600, height=128, speed=3, lw=1
 
-  presets = presets || {}
-  presets.none = new Set()
-  presets.all = new Set()
-  let preset = presets.default || presets.all
+  const numbers = new Set(features.numbers)
+  const hidden = new Set(monitor_def.hidden)
+  const known = new Set(), unknown = new Set()
+  const addsigs = signals => {for (const signal of signals) known.add(signal)}
+  Object.values(graphs).forEach(sigs => addsigs(sigs))
+  Object.values(features).forEach(sigs => addsigs(sigs))
+  addsigs(hidden)
 
-  const disp = ui.v(
+  const els = ui.v(
     h.canvas('graph', {width, height}),
-    h.div({style: `width: ${width}px`}).of(
-      h.select('preset').of(
-        Object.keys(presets).map(preset => (
-          h.option({value: preset}).of(preset)))
-      ),
-      h.span('lines'),
-    ),
-    h.div('text_sigs', {style: 'margin-top: 20px'}),
+    h.div('labels', {style: `width: ${width}px`}),
+    h.div('features', {style: 'margin-top: 20px'}),
+    h.div('unknown', {style: 'margin-top: 20px; color: red'}),
   ).into(output).els
 
-  const lines = Lines(disp.lines)
+  const lines = Lines(els.labels, graphs)
 
-  disp.preset.addEventListener('change', () => {
-    preset = presets[disp.preset.value]
-    lines.set(preset)
-  })
+  const ctx = els.graph.getContext('2d')
 
-  const ctx = disp.graph.getContext('2d')
-
-  let t=-1, lastys={}
-  const nolines = new Set(['logmel', 'mfccs', 't', 'signalin'])
-  const text_sigs = new Set(['state', 'position'])
+  let t=-1, lastys={}, gt = 0
+  const special = new Set(['logmel', 'mfccs', 't', 'signalin'])
   function listener(data) {
     signals = data
     t++
     if (signals.state.indexOf('frozen') !== -1) {
-      disp.text_sigs.textContent = signals.state
+      els.text_sigs.textContent = signals.state
       return
+    }
+    if (Date.now() - gt > grid.ms) {
+      gt = Date.now()
+      for(let y = grid.dy; y < 1; y += grid.dy) {
+        ctx.fillStyle = '#0f0'
+        ctx.fillRect(width - 2, height * y, 1, 1)
+      }
     }
     const img = ctx.getImageData(speed, 0, width - speed - 1, height)
     ctx.putImageData(img, 0, 0);
@@ -56,17 +67,12 @@ export const Monitor = (output, { presets }) => {
       })
     }
 
-    let text = ''
+    let features = ''
     u.sorted(Object.keys(signals)).forEach(sig => {
-      if (text_sigs.has(sig)) {
-        text += `${sig}=${signals[sig]} `
-        return
+      if (numbers.has(sig)) {
+        features += `${sig}=${signals[sig]} `
       }
-      if (nolines.has(sig)) {
-        return
-      }
-      presets.all.add(sig)
-      const color = lines.get(sig, t, preset)
+      const color = lines.get_color(sig)
       if (color) {
         const y = Math.floor((height - 1) * (1 - signals[sig]))
         const lasty = lastys.hasOwnProperty(sig) ? lastys[sig] : y
@@ -79,8 +85,14 @@ export const Monitor = (output, { presets }) => {
           speed, lw)
         lastys[sig] = y
       }
+      if (!known.has(sig)) {
+        if (!unknown.has(sig)) {
+          els.unknown.textContent += `${sig} `
+          unknown.add(sig)
+        }
+      }
     })
-    disp.text_sigs.textContent = text
+    els.features.textContent = features
   }
 
   return {
@@ -89,7 +101,7 @@ export const Monitor = (output, { presets }) => {
 }
 
 export const Dump = output => {
-  const disp = h.div().of(
+  const els = h.div().of(
     ui.h(
       h.button('dump').of('dump'),
       h.button('clear').of('clear'),
@@ -97,20 +109,20 @@ export const Dump = output => {
     h.pre('output'),
   ).into(output).els
 
-  disp.dump.addEventListener('click', () => {
-    disp.output.textContent = ''
+  els.dump.addEventListener('click', () => {
+    els.output.textContent = ''
     u.sorted(Object.entries(signals)).map(([k, v]) => {
       if (Array.isArray(v) && v.length && 'number' === typeof v[0]) {
         v = `[${v.map(x => x.toFixed(3)).join(',')}]`
       } else if ('object' === typeof v) {
         v = JSON.stringify(v)
       }
-      disp.output.textContent += `${k} = ${v}\n`
+      els.output.textContent += `${k} = ${v}\n`
     })
   })
 
-  disp.clear.addEventListener('click', () => {
-    disp.output.textContent = ''
+  els.clear.addEventListener('click', () => {
+    els.output.textContent = ''
   })
 
   let signals = null
@@ -120,5 +132,88 @@ export const Dump = output => {
 
   return {
     listener,
+  }
+}
+
+// Manages checkboxes and graph line styles.
+function Lines(output, graphs) {
+
+  const els = h.table('.lines').of(
+    Object.keys(graphs).map(group =>
+      h.tr().of(
+        h.td().of(group),
+        h.td().of(
+          ui.h(h.div(`${group} .flex`)).of(
+            graphs[group].map(sig => [
+              h.input(`checkbox_${sig} #line_${sig}`, { type: 'checkbox' }),
+              h.label(`label_${sig} .notyet`, { for: `line_${sig}` }).of(sig),
+            ]
+            ),
+          ),
+        ),
+      ),
+    ),
+  ).into(output).els
+
+  const palette = colors.strong_palette
+  let available = Array.from(palette)
+
+  let lines = {}
+
+  function set_color(sig, color) {
+    lines[sig] = {color, t: Date.now()}
+    els[`label_${sig}`].style.backgroundColor = color
+    els[`label_${sig}`].style.color = 'black'
+    els[`checkbox_${sig}`].checked = true
+  }
+
+  function set_next_color(sig) {
+    if (lines.sig && lines[sig].t) {
+      return
+    }
+    if (!available.length) {
+      // switch with oldest color
+      let oldest=null, min_t=new Date().getTime()
+      u.sorted(Object.keys(lines)).forEach(sig => {
+        if (lines[sig].t < min_t) {
+          min_t = lines[sig].t
+          oldest = sig
+        }
+      })
+      remove_color(oldest)
+    }
+    set_color(sig, available.shift())
+  }
+
+  function remove_color(sig) {
+    if (!sig || !lines[sig].t) {
+      return
+    }
+    available.unshift(lines[sig].color)
+    delete lines[sig]
+    els[`label_${sig}`].style = {}
+    els[`checkbox_${sig}`].checked = false
+  }
+
+  Object.keys(graphs).forEach(group =>
+    graphs[group].forEach(sig =>
+      els[`checkbox_${sig}`].addEventListener('change', function () {
+        if (this.checked) {
+          set_next_color(sig)
+        } else {
+          remove_color(sig)
+        }
+      })
+    )
+  )
+
+  function get_color(sig) {
+    const label = els[`label_${sig}`]
+    if (label) label.classList.remove('notyet')
+    return lines[sig] && lines[sig].color
+  }
+
+  return {
+    get_color,
   }
 }
