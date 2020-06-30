@@ -1,5 +1,7 @@
 """Signals transform sound to scalars."""
 
+import re
+
 # import aubio
 import numpy as np
 
@@ -20,6 +22,36 @@ def init(settings_):
 
 # state
 ###############################################################################
+
+class ActionLatch(L.Signal):
+    """Keeps last from a choice of actions with prefix."""
+
+    def init(self, regex):
+        self.value = None
+        self._regex = re.compile(regex)
+
+    def call(self, action):
+        if action:
+            m = self._regex.match(action)
+            if m:
+                self.value = m.group(1)
+        return self.value
+
+
+class TransientPulse(L.Signal):
+    """Creates a pulse based on a transient on/off signal."""
+
+    def init(self, transient_name: str, signal_name: str):
+        self.state = 0
+
+    def call(self, **signals):
+        transient = signals.get(self.transient_name)
+        if transient == f'{self.signal_name} on':
+            self.state = 1
+        elif transient == f'{self.signal_name} off':
+            self.state = 0
+        return self.state
+
 
 class RefractoryPulse(L.Signal):
     """Triggers a pulse with a refractory period."""
@@ -215,21 +247,6 @@ class FreqBand(L.Signal):
 
 # other inputs
 ###############################################################################
-
-class TransientPulse(L.Signal):
-    """Creates a pulse based on a transient on/off signal."""
-
-    def init(self, transient_name: str, signal_name: str):
-        self.state = 0
-
-    def call(self, **signals):
-        transient = signals.get(self.transient_name)
-        if transient == f'{self.signal_name} on':
-            self.state = 1
-        elif transient == f'{self.signal_name} off':
-            self.state = 0
-        return self.state
-
 
 class MidiSwitch(L.Signal):
     """Flips 0<->1 with every received note"""
