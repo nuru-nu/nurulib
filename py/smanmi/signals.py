@@ -26,15 +26,14 @@ def init(settings_):
 class ActionLatch(L.Signal):
     """Keeps last from a choice of actions with prefix."""
 
-    def init(self, regex):
-        self.value = None
+    def init(self, regex, value=None, converter=lambda x: x):
         self._regex = re.compile(regex)
 
     def call(self, action):
         if action:
             m = self._regex.match(action)
             if m:
-                self.value = m.group(1)
+                self.value = self.converter(m.group(1))
         return self.value
 
 
