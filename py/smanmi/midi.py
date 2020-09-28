@@ -10,11 +10,13 @@ Note on OS X (tested on 10.14.6):
 
 Note on Ableton Live:
 
-1. Preferences : Link MIDI : MIDI Port 'IAC Driver (Bus 1)' enable 'Remote'
-2. Click on 'MIDI' (top left button)
+1. Settings : Link MIDI : MIDI Port 'Input: IAC Driver (Bus 1)' enable 'Remote'
+2. Click on 'MIDI' (top right button)
 3. Agitate UI element to connect
 4. Run `python -m smanmi.midi --send='0: C2 on'
        `python -m smanmi.midi --send='0: C2 off'
+5. Settings : Link MIDI : Midi Port 'Output: IAC Driver (Bus 1)' enable 'Track'
+   then instruments can be redirected to 'MIDI To'
 
 Note on testing the setup:
 
@@ -186,6 +188,7 @@ class Midi:
             self.midi_outs.append(midi_out)
             logger.info(
                 'MIDI output port #%d : "%s"', port, name.decode('ascii'))
+        assert self.midi_outs, 'No output ports, check module pydoc!'
 
         midi = rtmidi.MidiIn(b'smanmi')
         self.midi_ins = []
@@ -196,9 +199,11 @@ class Midi:
             self.midi_ins.append(midi_in)
             logger.info(
                 'MIDI input port #%d : "%s"', port, name.decode('ascii'))
+        assert self.midi_ins, 'No input ports, check module pydoc!'
 
     def send(self, command: Command):
         self.sent.add(command)
+        assert command.note.port < len(self.midi_outs), f'Not enough output ports!'
         self.midi_outs[command.note.port].send_message(command.bytes)
 
     def callback(self, port, message, timestamp):
