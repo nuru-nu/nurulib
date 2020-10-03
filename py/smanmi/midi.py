@@ -174,6 +174,7 @@ class Midi:
 
         Args:
           logger: Logger for logging output.
+          echo: Whether signals sent to MIDI out should be echo-ed in MIDI in
         """
         self.logger = logger
         self.echo = echo
