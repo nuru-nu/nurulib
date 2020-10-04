@@ -34,6 +34,9 @@ export const Monitor = (output, { monitor_def }) => {
   ).into(output).els
 
   const lines = Lines(els.labels, graphs)
+  els.graph.addEventListener('click', lines.toggle)
+  monitor_def.selected.forEach(lines.set_next_color)
+  lines.toggle()
 
   const ctx = els.graph.getContext('2d')
 
@@ -138,16 +141,19 @@ export const Dump = output => {
 // Manages checkboxes and graph line styles.
 function Lines(output, graphs) {
 
-  const els = h.table('.lines').of(
-    Object.keys(graphs).map(group =>
-      h.tr().of(
-        h.td().of(group),
-        h.td().of(
-          ui.h(h.div(`${group} .flex`)).of(
-            graphs[group].map(sig => [
-              h.input(`checkbox_${sig} #line_${sig}`, { type: 'checkbox' }),
-              h.label(`label_${sig} .notyet`, { for: `line_${sig}` }).of(sig),
-            ]
+  const els = h.div().of(
+    h.div('summary .summary', { display: 'none' }),
+    h.table('table .lines').of(
+      Object.keys(graphs).map(group =>
+        h.tr().of(
+          h.td().of(group),
+          h.td().of(
+            ui.h(h.div(`${group} .flex`)).of(
+              graphs[group].map(sig => [
+                h.input(`checkbox_${sig} #line_${sig}`, { type: 'checkbox' }),
+                h.label(`label_${sig} .notyet`, { for: `line_${sig}` }).of(sig),
+              ]
+              ),
             ),
           ),
         ),
@@ -157,6 +163,7 @@ function Lines(output, graphs) {
 
   const palette = colors.strong_palette
   let available = Array.from(palette)
+  let toggled = false
 
   let lines = {}
 
@@ -213,7 +220,24 @@ function Lines(output, graphs) {
     return lines[sig] && lines[sig].color
   }
 
+  function toggle() {
+    toggled = !toggled
+    if (toggled) {
+      els.table.style.display = 'none'
+      u.empty(els.summary)
+      Object.keys(lines).forEach(sig => {
+        h.span().of(sig).into(els.summary).el.style.color = lines[sig].color
+      })
+      els.summary.style.display = 'block'
+    } else {
+      els.table.style.display = 'block'
+      els.summary.style.display = 'none'
+    }
+  }
+
   return {
+    set_next_color,
     get_color,
+    toggle,
   }
 }

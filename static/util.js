@@ -208,8 +208,12 @@ export const u = function() {
     b.sort()
     return b
   }
+  function empty(el) {
+    while (el.firstChild) el.removeChild(el.firstChild)
+  }
   return {
     sorted,
+    empty,
   }
 }()
 
@@ -296,9 +300,7 @@ export const Console = function(output) {
   const disp = h.div('.scrollable').of(h.div('console')).into(output).els
 
   function clear() {
-    while (disp.console.firstChild) {
-      disp.console.remove(disp.console.firstChild)
-    }
+    u.empty(disp.console)
     console.clear()
   }
 
