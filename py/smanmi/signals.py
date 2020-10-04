@@ -342,6 +342,21 @@ class Lin(L.Signal):
         return value
 
 
+class To(L.Signal):
+    """Transforms range `src` to range `dst`."""
+
+    def init(
+        self, dst_min, dst_max, src_min=0, src_max=1,
+        f=lambda x: x, clip=False):
+        pass
+
+    def call(self, value):
+        x = (value - self.src_min) / (self.src_max - self.src_min)
+        if self.clip:
+            x = np.clip(x, 0, 1)
+        return x * (self.dst_max - self.dst_min) + self.dst_min
+
+
 class Thr(L.Signal):
     """Returns 1-signal if above threshold."""
 
