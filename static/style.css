@@ -39,6 +39,14 @@ button {
 #monitor { margin-top: 1rem; }
 #monitor canvas { margin-top: 1rem; }
 
+#monitor canvas {
+  cursor: pointer;
+}
+
+#monitor .summary > span {
+  margin-right: 1rem;
+}
+
 #monitor input[type="checkbox"] {
   display: none;
 }
@@ -59,6 +67,7 @@ input[type="text"] {
 .flex {
   display: flex;
   align-items: flex-start;
+  flex-wrap: wrap;
 }
 
 .h {

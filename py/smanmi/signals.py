@@ -5,7 +5,6 @@ import re
 # import aubio
 import numpy as np
 
-from .midi import Command, Note
 from . import logic as L
 from . import util
 
@@ -26,15 +25,14 @@ def init(settings_):
 class ActionLatch(L.Signal):
     """Keeps last from a choice of actions with prefix."""
 
-    def init(self, regex):
-        self.value = None
+    def init(self, regex, value=None, converter=lambda x: x):
         self._regex = re.compile(regex)
 
     def call(self, action):
         if action:
             m = self._regex.match(action)
             if m:
-                self.value = m.group(1)
+                self.value = self.converter(m.group(1))
         return self.value
 
 
@@ -245,25 +243,6 @@ class FreqBand(L.Signal):
         return (1 + np.cos((np.clip(x, 0, 1) - 1) * np.pi)) / 2
 
 
-# other inputs
-###############################################################################
-
-class MidiSwitch(L.Signal):
-    """Flips 0<->1 with every received note"""
-
-    def init(self, note: Note):
-        assert isinstance(note, Note)
-        self.state = 0.
-
-    def call(self, midi):
-        if midi:
-            command = Command.parse(midi)
-            if command and command.note == self.note:
-                if command.command == 'on':
-                    self.state = 1 - self.state
-        return self.state
-
-
 # generators
 ###############################################################################
 
@@ -362,6 +341,21 @@ class Lin(L.Signal):
         if self.mod:
             value = value % self.mod
         return value
+
+
+class To(L.Signal):
+    """Transforms range `src` to range `dst`."""
+
+    def init(
+        self, dst_min, dst_max, src_min=0, src_max=1,
+        f=lambda x: x, clip=False):
+        pass
+
+    def call(self, value):
+        x = (value - self.src_min) / (self.src_max - self.src_min)
+        if self.clip:
+            x = np.clip(x, 0, 1)
+        return x * (self.dst_max - self.dst_min) + self.dst_min
 
 
 class Thr(L.Signal):
