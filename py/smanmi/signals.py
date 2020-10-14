@@ -293,6 +293,7 @@ class KinectDistance(L.Signal):
         return [
             (p['cm'][0] ** 2 + p['cm'][1] ** 2) ** .5
             for p in people
+            if 'cm' in p
         ]
 
 
