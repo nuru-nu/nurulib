@@ -75,17 +75,17 @@ class Command:
     def _parse_note(self, channel, letter, octave, value):
         self.kind = 'note'
         channel = int(channel)
-        assert 1 <= channel <= 16, channel
+        assert 1 <= channel <= 16, f'channel={channel}'
         self.channel = channel
         octave = int(octave)
-        assert -2 <= octave <= 8, octave
+        assert -2 <= octave <= 8, f'octave={octave}'
         self._halftone = (
             24
             + int(octave) * 12
             + self.LETTERS.index(letter)
         )
         self.name = f'{channel}: {letter}{octave}'
-        assert value in ('on', 'off'), value
+        assert value in ('on', 'off'), f'value={value}'
         self.value = value
         if value == 'on':
             self.bytes = (
@@ -103,7 +103,7 @@ class Command:
     def _parse_controller(self, channel, number, value):
         self.kind = 'controller'
         channel = int(channel)
-        assert 1 <= channel <= 16, channel
+        assert 1 <= channel <= 16, f'channel={channel}'
         self.channel = channel
         value = int(value)
         number = int(number)
@@ -224,7 +224,7 @@ class UdpOutbound(asyncio.DatagramProtocol):
 
 def signal2midi(data, logger):
     if 'midi' in data:
-        command = Command.parse(data['midi'])
+        command = Command(data['midi'])
         if command:
             return (command,)
         else:
