@@ -3,6 +3,7 @@ import colorsys
 import numpy as np
 
 from . import logic as L
+from . import palette as P
 
 
 # color signals
@@ -47,6 +48,20 @@ class Palette(L.Signal):
 
     def call(self, value):
         return self.lookup[(np.clip(value, 0, 1) * (self.n - 1)).astype(int)]
+
+
+class AllPalettes(L.Signal):
+    """Maps 0..1 to all available palettes."""
+
+    def init(self, x):
+        self.palettes = [
+            Palette(getattr(P, p)) for p in dir(P)
+            if P.is_palette(getattr(P, p))
+        ]
+
+
+    def call(self, value):
+        return self.palettes[int(self.x * len(self.palettes))](value=value)
 
 
 class InterpolPalette(L.Signal):

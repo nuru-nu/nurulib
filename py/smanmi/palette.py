@@ -7,6 +7,10 @@ import collections
 ColorPoint = collections.namedtuple('ColorPoint', ['index', 'color'])
 
 
+def is_palette(p):
+    return isinstance(p, list) and p and isinstance(p[0], ColorPoint)
+
+
 def parse_colors_co_scss(scss):
     """Copy'n'paste color.co's SCSS palettes."""
     rgbs = [
