@@ -256,6 +256,13 @@ class PrintEvery:
             print(msg)
 
 
+_print_every = {}
+def print_every(name, msg, dt=5):
+    if name not in _print_every:
+        _print_every[name] = PrintEvery(dt)
+    _print_every[name](msg)
+
+
 def except_kill(func):
     """Kills the program if any exception is encountered."""
     def wrapper(*args, **kw):
