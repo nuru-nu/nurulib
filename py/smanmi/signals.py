@@ -151,6 +151,9 @@ class RndRamp(L.Signal):
 ###############################################################################
 
 
+# Consider using crepe instead of aubio:
+# https://github.com/marl/crepe
+
 # class Pitcher(L.Signal):
 #     """Extracts pitch signal in Hz using `aubio`."""
 #
