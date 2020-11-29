@@ -1,5 +1,9 @@
 import collections
 
+import numpy as np
+
+from . import logic as L
+
 
 # parse palettes
 ###############################################################################
@@ -50,6 +54,84 @@ def parse_colors_hex(indexes_and_hexes):
     ]
 
 
+# palette signals
+###############################################################################
+
+class NamedPalette(L.Signal):
+
+    def init(self, name):
+        self.palettes = {}
+        self.palette = self.current = None
+
+    def call(self):
+        if self.name != self.current:
+            if self.name not in self.palettes:
+                self.palettes[self.name] = Palette(globals()[self.name])
+            self.current = self.name
+            self.palette = self.palettes[self.name]
+        return self.palette
+
+class Palette(L.Signal):
+    """Generates array of colors with precomputed interpolated palette."""
+
+    def init(self, colors, n=256):
+        xs = np.linspace(0, 1, n)
+        self.lookup = np.array([
+            np.interp(
+                xs, [c.index for c in colors], [c.color[i] for c in colors])
+            for i in range(3)
+        ]).T
+
+    def call(self, value):
+        return self.lookup[(np.clip(value, 0, 1) * (self.n - 1)).astype(int)]
+
+
+class InterpolPalette(L.Signal):
+    """Interpolates between palettes based on control value valence."""
+
+    def init(self, value, palettes):
+        """Palettes is iterable of (value, palette)."""
+        lvalue = None
+        assert palettes
+        self.ps = []
+        for i, (value, palette) in enumerate(palettes):
+            if lvalue is not None:
+                assert lvalue < value, i
+            if not isinstance(palette, Palette):
+                palette = Palette(palette)
+            self.ps.append((value, palette))
+        self.vmin = self.ps[0][0]
+        self.vmax = self.ps[-1][0]
+        self.p0 = self.p1 = self.v0 = self.v1 = None
+
+    def call(self, value):
+        v = np.clip(self.value, self.vmin, self.vmax)
+        if self.v0 is None or v < self.v0 or v > self.v1:
+            for (self.v0, self.p0), (self.v1, self.p1) in zip(
+                    self.ps[:-1], self.ps[1:]):
+                if v > self.v0 and v <= self.v1:
+                    break
+        x = (v - self.v0) / (self.v1 - self.v0)
+        return self.p0(value=value) * (1 - x) + self.p1(value=value) * x
+
+
+class StatePalette(L.Signal):
+    """Chooses a Palette based on `state.color`."""
+
+    def init(self, default_palette, palettes_dict):
+        self.default_palette_ = Palette(default_palette)
+        self.palettes_dict_ = {
+            name: Palette(palette)
+            for name, palette in palettes_dict.items()
+        }
+
+    def call(self, value, state):
+        return self.palettes_dict_.get(
+            state.color,
+            self.default_palette_
+        )
+
+
 # predefined palettes
 ###############################################################################
 
@@ -60,14 +142,14 @@ $color3: rgba(234, 53, 70, 1);
 $color4: rgba(102, 46, 155, 1);
 $color5: rgba(67, 188, 205, 1);''')
 
-barbie = parse_colors_co_scss('''
+_barbie = parse_colors_co_scss('''
 $color1: rgba(247, 237, 240, 1);
 $color2: rgba(244, 203, 198, 1);
 $color3: rgba(244, 175, 171, 1);
 $color4: rgba(244, 238, 169, 1);
 $color5: rgba(244, 244, 130, 1);''')
 
-purple_haze = parse_colors_co_scss('''
+_purple_haze = parse_colors_co_scss('''
 $color1: rgba(110, 68, 255, 1);
 $color2: rgba(184, 146, 255, 1);
 $color3: rgba(244, 175, 171, 1);
@@ -110,7 +192,7 @@ $color4: rgba(156, 191, 167, 1);
 $color5: rgba(201, 242, 153, 1);''')
 
 # https://coolors.co/ffffff-ea7af4-b43e8f-6200b3-8451ad
-blueish_palette = parse_colors_co_scss('''
+blueish = parse_colors_co_scss('''
 $color1: rgba(255, 255, 255, 1);
 $color2: rgba(234, 122, 244, 1);
 $color3: rgba(180, 62, 143, 1);
@@ -118,7 +200,7 @@ $color4: rgba(98, 0, 179, 1);
 $color5: rgba(132, 81, 173, 1);''')
 
 # https://coolors.co/7e5920-210f04-dc851f-621b00-f42c04
-brownish_palette = parse_colors_co_scss('''
+brownish = parse_colors_co_scss('''
 $color1: rgba(126, 89, 32, 1);
 $color2: rgba(33, 15, 4, 1);
 $color3: rgba(220, 133, 31, 1);
