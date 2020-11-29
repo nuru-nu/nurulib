@@ -123,62 +123,78 @@ export const h = (function() {
 
 // Synposis:
 // ui.h(ui.v('top', 'bottom'), 'right')
-// ui.choice({values: ['A', 'B']}).change(value => {})
-// ui.dropdown({values: ['A', 'B']}).change(value => {})
-// ui.toggle(name).change(value => {})
+// ui.choice({values: ['A', 'B']})
+// ui.dropdown({values: ['A', 'B']})
+// ui.toggle(name)
+// ui.range(name)
+// *[.change(value =>)][.init()]
 export const ui = (() => {
 
-  const updater = (el, initial) => {
+  const updater = (el, getter) => {
     const listeners = new Set()
     el.change = listener => {
       listeners.add(listener)
-      listener(initial)
+      return el
     }
-    return value => {
-      Array.from(listeners).map(listener => listener(value))
+    el.init = () => {
+      listeners.forEach(listener => listener(getter()))
+      return el
+    }
+    return () => {
+      Array.from(listeners).map(listener => listener(getter()))
     }
   }
 
   const choice = (name, {values, initial}) => {
-    initial = initial || values[0]
-    const listeners = new Set()
+    let value = initial || values[0]
     const disp = h.div('cont', {class: 'flex'}).of(
       values.map(value => h.button(value).of(value))
     ).els
-    const update = updater(disp.cont, initial)
-    values.map(value => disp[value].addEventListener('click', () => {
+    const update = updater(disp.cont, () => value)
+    function set(value_) {
+       value = value_
       values.map(value => disp[value].classList.remove('on'))
       disp[value].classList.add('on')
-      update(value)
+      disp.cont.value = value
+    }
+    values.map(value => disp[value].addEventListener('click', () => {
+      set(value)
+      update()
     }))
-    disp[initial].dispatchEvent(new Event('click'))
+    set(value)
     disp.cont.name = name
     return disp.cont
   }
 
   const dropdown = (name, {values, initial}) => {
     initial = initial || values[0]
-    const listeners = new Set()
     const select = h.select().of(
       values.map(value => h.option({value}).of(value))
     ).el
-    const update = updater(select, initial)
-    select.addEventListener('change', e => update(select.value))
+    const update = updater(select, () => select.value)
+    select.addEventListener('change', update)
     select.value = initial
-    select.dispatchEvent(new Event('change'))
     select.name = name
     return select
+  }
+
+  const range = name => {
+    const value = 0
+    const range = h.input(name, {type: 'range', min: 0, max: 1, step: .01, value})
+    const update = updater(range, () => range.el.value)
+    range.el.addEventListener('input', update)
+    return range
   }
 
   const toggle = (name, initial) => {
     let value = initial || false
     const button = h.button(initial && '.on').of(name).el
     button.name = name
-    const update = updater(button, initial)
+    const update = updater(button, () => value)
     button.addEventListener('click', () => {
       value = !value
       button.classList[value ? 'add' : 'remove']('on')
-      update(value)
+      update()
     })
     return button
   }
@@ -194,6 +210,7 @@ export const ui = (() => {
   return {
     choice,
     dropdown,
+    range,
     h: h_,
     hw,
     toggle,
