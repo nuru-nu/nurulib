@@ -458,6 +458,16 @@ class Apply(L.Signal):
         return self.signal(value=value)
 
 
+class Dict(L.Signal):
+    """Returns a value from a dictionary."""
+
+    def init(self, name, dictionary):
+        pass
+
+    def call(self):
+        return self.dictionary[self.name]
+
+
 class F(L.Signal):
     """Calculates a function on previous signal with optional parameters."""
 
