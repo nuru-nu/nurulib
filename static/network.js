@@ -90,7 +90,9 @@ export const Network = (output, options) => {
 
   function sender(d, silent) {
     if (!silent) console.log('>>>', d)
-    socks.signals.send(JSON.stringify(d))
+    if (socks.signals.readyState === socks.signals.OPEN) {
+      socks.signals.send(JSON.stringify(d))
+    }
   }
 
   function download(name, ts) {
