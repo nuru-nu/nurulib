@@ -67,7 +67,6 @@ input[type="text"] {
 .flex {
   display: flex;
   align-items: flex-start;
-  flex-wrap: wrap;
 }
 
 .h {
