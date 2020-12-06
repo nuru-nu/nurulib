@@ -1,6 +1,7 @@
 """Signals transform sound to scalars."""
 
 import re
+from typing import Optional, Tuple
 
 # import aubio
 import numpy as np
@@ -249,6 +250,16 @@ class FreqBand(L.Signal):
 # generators
 ###############################################################################
 
+class Const(L.Signal):
+    """Simply returns a constant value."""
+
+    def init(self, value):
+        pass
+
+    def call(self):
+        return self.value
+
+
 class Saw(L.Signal):
     """Sawtooth wave.
 
@@ -486,13 +497,16 @@ class F(L.Signal):
 class Int(L.Signal):
     """Integrates the signal."""
 
-    def init(self, min: int = 0, max: int = 1):
+    def init(self,
+             slope: float = 1,
+             mod: Optional[int] = None):
         self.t = self.value = 0
 
     def call(self, value, t):
         if self.t:
-            self.value = np.clip(
-                self.value + value * (t - self.t), self.min, self.max)
+            self.value += value * (t - self.t)
+        if self.mod:
+            self.value %= self.mod
         self.t = t
         return self.value
 

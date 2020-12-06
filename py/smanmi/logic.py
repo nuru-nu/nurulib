@@ -156,16 +156,6 @@ class SignalLast(Signal):
         return value
 
 
-class Constant(Signal):
-    """Simply returns a constant value."""
-
-    def init(self, value):
-        pass
-
-    def call(self):
-        return self.value
-
-
 class SignalChain(Signal):
 
     def __init__(self, sig1, sig2):
