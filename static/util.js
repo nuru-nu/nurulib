@@ -178,11 +178,12 @@ export const ui = (() => {
     return select
   }
 
-  const range = name => {
-    const value = 0
-    const range = h.input(name, {type: 'range', min: 0, max: 1, step: .01, value})
-    const update = updater(range, () => range.el.value)
-    range.el.addEventListener('input', update)
+  const range = (name, opts) => {
+    opts = opts || {}
+    const value = opts.value || 0
+    const range = h.input(name, {type: 'range', min: 0, max: 1, step: .01, value}).el
+    const update = updater(range, () => range.value)
+    range.addEventListener('input', update)
     return range
   }
 
