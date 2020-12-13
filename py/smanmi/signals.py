@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 
 # import aubio
 import numpy as np
+from scipy import stats
 
 from . import logic as L
 from . import util
@@ -50,6 +51,22 @@ class TransientPulse(L.Signal):
         elif transient == f'{self.signal_name} off':
             self.state = 0
         return self.state
+
+
+class RandomPulse(L.Signal):
+    """Creates a random pulse train with poisson distribution."""
+
+    def init(self, hz=1, duration=0.1):
+        self.last_t = self.dt = 0
+
+    def call(self, t):
+        dt = t - self.last_t
+        if dt > self.dt:
+            self.last_t = t
+            self.dt = stats.expon(scale=1 / self.hz).rvs() + self.duration
+        if dt < self.duration:
+            return 1
+        return 0
 
 
 class RefractoryPulse(L.Signal):
