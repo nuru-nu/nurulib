@@ -511,6 +511,27 @@ class Int(L.Signal):
         return self.value
 
 
+class RateLimit(L.Signal):
+    """Limits dvalue/dt."""
+
+    def init(self, limit):
+        self.last_value = self.last_t = None
+
+    def call(self, value, t):
+        if self.last_value is None:
+            dt = rate = 0
+        else:
+            dt = (t - self.last_t)
+            rate = (value - self.last_value) / dt
+            if rate >= 0:
+                rate = min(rate, self.limit)
+            else:
+                rate = max(rate, -self.limit)
+            value = self.last_value + rate * dt
+        self.last_t = t
+        self.last_value = value
+        return value
+
 class MovingAverage(L.Signal):
     """Keeps a moving average over `n` samples or `secs` seconds."""
 
