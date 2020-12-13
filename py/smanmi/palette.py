@@ -263,6 +263,14 @@ peak_green = parse_colors_hex([
     (1, '000'),
 ])
 
+peak_vio = parse_colors_hex([
+    (0, '000'),
+    (0.4, '000'),
+    (0.5, 'f0f'),
+    (0.6, '000'),
+    (1, '000'),
+])
+
 peak_blue = parse_colors_hex([
     (0, '000'),
     (0.4, '000'),
