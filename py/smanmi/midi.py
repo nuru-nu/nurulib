@@ -223,8 +223,9 @@ class UdpOutbound(asyncio.DatagramProtocol):
 
 
 def signal2midi(data, logger):
-    if 'midi' in data:
-        command = Command(data['midi'])
+    midi = data.get('midi')
+    if midi:
+        command = Command(midi)
         if command:
             return (command,)
         else:
@@ -274,6 +275,7 @@ class MidiForwarder:
 
     def datagram_received(self, data):
         data = util.deserialize(data)
+        # print('data', type(data), data)
         for signal2midi in self.signal2midis:
             for command in signal2midi(data, self.logger):
                 self.logger.info('Sending %s', command)
