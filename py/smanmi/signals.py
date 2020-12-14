@@ -5,6 +5,7 @@ from typing import Optional, Tuple
 
 # import aubio
 import numpy as np
+from scipy import stats
 
 from . import logic as L
 from . import util
@@ -37,37 +38,6 @@ class ActionLatch(L.Signal):
         return self.value
 
 
-class TransientPulse(L.Signal):
-    """Creates a pulse based on a transient on/off signal."""
-
-    def init(self, transient_name: str, signal_name: str):
-        self.state = 0
-
-    def call(self, **signals):
-        transient = signals.get(self.transient_name)
-        if transient == f'{self.signal_name} on':
-            self.state = 1
-        elif transient == f'{self.signal_name} off':
-            self.state = 0
-        return self.state
-
-
-class RefractoryPulse(L.Signal):
-    """Triggers a pulse with a refractory period."""
-
-    def init(self, threshold, pulse_secs, refractory_secs):
-        self.t0 = 0
-
-    def call(self, t, value):
-        if t - self.t0 < self.pulse_secs:
-            return 1
-        if value < self.threshold:
-            return 0
-        if t - self.t0 > self.refractory_secs:
-            self.t0 = t
-            return 1
-
-
 class InState(L.Signal):
     """Evaluates to 1 iff in specified state."""
 
@@ -91,6 +61,54 @@ class NotInState(L.Signal):
 # pulses, ramps
 ###############################################################################
 
+
+class TransientPulse(L.Signal):
+    """Creates a pulse based on a transient on/off signal."""
+
+    def init(self, transient_name: str, signal_name: str):
+        self.state = 0
+
+    def call(self, **signals):
+        transient = signals.get(self.transient_name)
+        if transient == f'{self.signal_name} on':
+            self.state = 1
+        elif transient == f'{self.signal_name} off':
+            self.state = 0
+        return self.state
+
+
+class RandomPulse(L.Signal):
+    """Creates a random pulse train with poisson distribution."""
+
+    def init(self, hz=1, duration=0.1):
+        self.last_t = self.dt = 0
+
+    def call(self, t):
+        dt = t - self.last_t
+        if dt > self.dt:
+            self.last_t = t
+            self.dt = stats.expon(scale=1 / self.hz).rvs() + self.duration
+        if dt < self.duration:
+            return 1
+        return 0
+
+
+class RefractoryPulse(L.Signal):
+    """Triggers a pulse with a refractory period."""
+
+    def init(self, threshold, pulse_secs, refractory_secs):
+        self.t0 = 0
+
+    def call(self, t, value):
+        if t - self.t0 < self.pulse_secs:
+            return 1
+        if value < self.threshold:
+            return 0
+        if t - self.t0 > self.refractory_secs:
+            self.t0 = t
+            return 1
+
+
 class TriggerPulse(L.Signal):
     """Creates a 1-pulse of duration `secs` when `state` is entered."""
 
@@ -104,23 +122,6 @@ class TriggerPulse(L.Signal):
             if state.state == self.state:
                 self.last_t = t
         if t - self.last_t < self.secs:
-            return 1.
-        return 0.
-
-
-class RndPulse(L.Signal):
-    """Emits 1-pulses after random breaks."""
-
-    def init(self, break_minmax):
-        self.t0 = None
-        self.wait_s = L.rnd(break_minmax)
-
-    def call(self, t):
-        if self.t0 is None:
-            self.t0 = t
-        if t - self.t0 >= self.wait_s:
-            self.t0 = t
-            self.wait_s = L.rnd(self.break_minmax)
             return 1.
         return 0.
 
@@ -264,6 +265,8 @@ class Saw(L.Signal):
     """Sawtooth wave.
 
     Note : Use with `| S.Tocos()` to generate smooth waves.
+
+    Note : Mostly superseeded by S.Const() | S.Int() nowadays ...
     """
 
     def init(self, hz):
@@ -293,8 +296,19 @@ class KinectDistance(L.Signal):
 # utils
 ###############################################################################
 
+
+class Print(L.Signal):
+    """Prints if not none."""
+
+    def init(self, message, signal):
+        pass
+
+    def call(self):
+        if self.signal is not None:
+            print(self.message, self.signal)
+
 class T(L.Signal):
-    """Returns transpoed."""
+    """Returns transposed."""
 
     def call(self, value):
         return value.T
@@ -516,6 +530,27 @@ class Int(L.Signal):
         self.t = t
         return self.value
 
+
+class RateLimit(L.Signal):
+    """Limits dvalue/dt."""
+
+    def init(self, limit):
+        self.last_value = self.last_t = None
+
+    def call(self, value, t):
+        if self.last_value is None:
+            dt = rate = 0
+        else:
+            dt = (t - self.last_t)
+            rate = (value - self.last_value) / dt
+            if rate >= 0:
+                rate = min(rate, self.limit)
+            else:
+                rate = max(rate, -self.limit)
+            value = self.last_value + rate * dt
+        self.last_t = t
+        self.last_value = value
+        return value
 
 class MovingAverage(L.Signal):
     """Keeps a moving average over `n` samples or `secs` seconds."""
