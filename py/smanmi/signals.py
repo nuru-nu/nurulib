@@ -38,6 +38,30 @@ class ActionLatch(L.Signal):
         return self.value
 
 
+class InState(L.Signal):
+    """Evaluates to 1 iff in specified state."""
+
+    def init(self, state):
+        pass
+
+    def call(self, value, state):
+        return value * (state.state == self.state)
+
+
+class NotInState(L.Signal):
+    """Evaluates to 1 iff NOT in specified state."""
+
+    def init(self, state):
+        pass
+
+    def call(self, value, state):
+        return value * (state.state != self.state)
+
+
+# pulses, ramps
+###############################################################################
+
+
 class TransientPulse(L.Signal):
     """Creates a pulse based on a transient on/off signal."""
 
@@ -85,29 +109,6 @@ class RefractoryPulse(L.Signal):
             return 1
 
 
-class InState(L.Signal):
-    """Evaluates to 1 iff in specified state."""
-
-    def init(self, state):
-        pass
-
-    def call(self, value, state):
-        return value * (state.state == self.state)
-
-
-class NotInState(L.Signal):
-    """Evaluates to 1 iff NOT in specified state."""
-
-    def init(self, state):
-        pass
-
-    def call(self, value, state):
-        return value * (state.state != self.state)
-
-
-# pulses, ramps
-###############################################################################
-
 class TriggerPulse(L.Signal):
     """Creates a 1-pulse of duration `secs` when `state` is entered."""
 
@@ -121,23 +122,6 @@ class TriggerPulse(L.Signal):
             if state.state == self.state:
                 self.last_t = t
         if t - self.last_t < self.secs:
-            return 1.
-        return 0.
-
-
-class RndPulse(L.Signal):
-    """Emits 1-pulses after random breaks."""
-
-    def init(self, break_minmax):
-        self.t0 = None
-        self.wait_s = L.rnd(break_minmax)
-
-    def call(self, t):
-        if self.t0 is None:
-            self.t0 = t
-        if t - self.t0 >= self.wait_s:
-            self.t0 = t
-            self.wait_s = L.rnd(self.break_minmax)
             return 1.
         return 0.
 
@@ -281,6 +265,8 @@ class Saw(L.Signal):
     """Sawtooth wave.
 
     Note : Use with `| S.Tocos()` to generate smooth waves.
+
+    Note : Mostly superseeded by S.Const() | S.Int() nowadays ...
     """
 
     def init(self, hz):
@@ -310,8 +296,19 @@ class KinectDistance(L.Signal):
 # utils
 ###############################################################################
 
+
+class Print(L.Signal):
+    """Prints if not none."""
+
+    def init(self, message, signal):
+        pass
+
+    def call(self):
+        if self.signal is not None:
+            print(self.message, self.signal)
+
 class T(L.Signal):
-    """Returns transpoed."""
+    """Returns transposed."""
 
     def call(self, value):
         return value.T
