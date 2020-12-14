@@ -324,6 +324,12 @@ class Length(L.Signal):
         return len(value)
 
 
+class With(L.Signal):
+    def init(self, value):
+        pass
+    def call(self, value):
+        return list(value) + [self.value]
+
 class Min(L.Signal):
     """Returns minimum value of array, or default."""
 
