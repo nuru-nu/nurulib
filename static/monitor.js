@@ -103,39 +103,68 @@ export const Monitor = (output, { monitor_def }) => {
   }
 }
 
-export const Dump = output => {
+export const Dump = (output, {network}) => {
   const els = h.div().of(
     ui.h(
-      h.button('dump').of('dump'),
-      h.button('clear').of('clear'),
+      ui.toggle('dump'),
+      ' - filter: ',
+      h.input('include', {type: 'text'}), '\\',
+      h.input('exclude', {type: 'text'}),
+      ui.toggle('live'),
     ),
     h.pre('output'),
   ).into(output).els
 
-  els.dump.addEventListener('click', () => {
+  let include = '', exclude = '', live = false, shown = false
+
+  els.include.addEventListener('keyup', e => {
+    include = e.target.value.split(/\s+/g).filter(x => x !== '')
+    update()
+  })
+  els.exclude.addEventListener('keyup', e => {
+    exclude = e.target.value.split(/\s+/g).filter(x => x !== '')
+    update()
+  })
+
+  const matches = s => (
+    !include.length || include.some(token => s.search(token) >= 0)
+  ) && (
+    !exclude.length || exclude.every(token => s.search(token) == -1)
+  )
+
+  els.live.change(value => live = value).classList.add('h')
+  els.dump.change(value => {
+    shown = value
+    if (value) {
+      els.live.classList.remove('h')
+    } else {
+      els.live.classList.add('h')
+      els.output.textContent = ''
+    }
+    update()
+  })
+
+  function update() {
     els.output.textContent = ''
+    if (!shown) return
     u.sorted(Object.entries(signals)).map(([k, v]) => {
+      if (!matches(k)) return
       if (Array.isArray(v) && v.length && 'number' === typeof v[0]) {
         v = `[${v.map(x => x.toFixed(3)).join(',')}]`
       } else if ('object' === typeof v) {
         v = JSON.stringify(v)
+      } else if ('number' === typeof v) {
+        v = v.toFixed(4)
       }
       els.output.textContent += `${k} = ${v}\n`
     })
-  })
-
-  els.clear.addEventListener('click', () => {
-    els.output.textContent = ''
-  })
+  }
 
   let signals = null
-  function listener(data) {
+  network.listenJson('signals', function(data) {
     signals = data
-  }
-
-  return {
-    listener,
-  }
+    if (shown && live) update()
+  })
 }
 
 // Manages checkboxes and graph line styles.
