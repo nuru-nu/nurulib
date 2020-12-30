@@ -361,6 +361,18 @@ class Noop(L.Signal):
         return value
 
 
+class Overridable(L.Signal):
+    """Overrides signal if non null."""
+
+    def init(self, signal, override):
+        pass
+
+    def call(self):
+        if self.override is not None:
+            return self.override
+        return self.signal
+
+
 # value transformation
 ###############################################################################
 
