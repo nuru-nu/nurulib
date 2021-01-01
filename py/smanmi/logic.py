@@ -294,7 +294,12 @@ class SignalRunner:
         values = dict(**kw)
         missing = self.provided.difference(values.keys())
         if missing:
-            raise MissingInputsException(f'Missing provided : {missing}')
+            wanting = [
+                str(signal) for signal in self.signals.values()
+                if missing.intersection(signal.wants)
+            ]
+            raise MissingInputsException(
+                f'Missing provided : {missing} - wanted by {wanting}')
         for name in self.ordered:
             values[name] = self.signals[name](**values)
         return values
