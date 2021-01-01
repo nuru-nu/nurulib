@@ -112,6 +112,7 @@ export const h = (function() {
   let tags = [
     'a', 'div', 'span', 'button', 'pre', 'canvas', 'br',
     'input', 'label', 'select', 'option', 'table', 'tr', 'td',
+    'textarea',
   ]
   tags.forEach(tag => {
     ns[tag] = function() {
@@ -352,4 +353,17 @@ export const Console = function(output) {
   })
 
   return funcs
+}
+
+const debounced = new Map()
+export function debounce(fun, ms) {
+  function handler() {
+    fun()
+    debounced.delete(fun)
+  }
+  const id = setTimeout(handler, ms)
+  if (debounced.has(fun)) {
+    clearTimeout(debounced.get(fun))
+  }
+  debounced.set(fun, id)
 }

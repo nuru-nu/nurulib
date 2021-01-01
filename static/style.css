@@ -64,6 +64,11 @@ input[type="text"] {
   border-bottom: 1px solid #0f0;
 }
 
+textarea {
+  outline: 0;
+  border: 1px solid #0f0;
+}
+
 .flex {
   display: flex;
   align-items: flex-start;
