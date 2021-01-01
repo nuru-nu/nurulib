@@ -19,7 +19,7 @@ export const Monitor = (output, { monitor_def }) => {
   const width=600, height=128, speed=3, lw=1
 
   const numbers = new Set(features.numbers)
-  const hidden = new Set(monitor_def.hidden)
+  const hidden = new Set(monitor_def.hidden.concat(monitor_def.transients))
   const known = new Set(), unknown = new Set()
   const addsigs = signals => {for (const signal of signals) known.add(signal)}
   Object.values(graphs).forEach(sigs => addsigs(sigs))
@@ -29,7 +29,8 @@ export const Monitor = (output, { monitor_def }) => {
   const els = ui.v(
     h.canvas('graph', {width, height}),
     h.div('labels', {style: `width: ${width}px`}),
-    h.div('features', {style: 'margin-top: 20px'}),
+    h.div('state', {style: 'margin-top: 20px'}),
+    h.div('features'),
     h.div('unknown', {style: 'margin-top: 20px; color: red'}),
   ).into(output).els
 
@@ -72,8 +73,13 @@ export const Monitor = (output, { monitor_def }) => {
 
     let features = ''
     u.sorted(Object.keys(signals)).forEach(sig => {
+      if (sig === 'state') {
+        els.state.textContent = signals[sig]
+        return
+      }
       if (numbers.has(sig)) {
         features += `${sig}=${signals[sig]} `
+        return
       }
       const color = lines.get_color(sig)
       if (color) {
@@ -87,6 +93,7 @@ export const Monitor = (output, { monitor_def }) => {
           width - speed - 1, y,
           speed, lw)
         lastys[sig] = y
+        return
       }
       if (!known.has(sig)) {
         if (!unknown.has(sig)) {
