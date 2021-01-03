@@ -120,6 +120,7 @@ export const Network = (output, options) => {
     listenJson,
     sender,
     download_timestamps,
+    fetch: path => fetch(path),
   }
 }
 
