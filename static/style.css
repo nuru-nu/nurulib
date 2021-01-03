@@ -19,7 +19,6 @@ button {
 }
 
 .scrollable {
-  margin-top: 1rem;
   border: 1px solid #0f0;
   height: 5rem;
   overflow: hidden;
