@@ -385,3 +385,15 @@ class KeyCounter:
         while self.events and self.events[0][0] < t - self.secs:
             _, key = self.events.popleft()
             self.counts[key] -= 1
+
+
+def print_exc(fun):
+    """Useful when executing code async."""
+    def wrapped():
+        try:
+            fun()
+        except Exception as e:
+            import traceback
+            logger.error('uncaught exception : %s', e)
+            logger.warning(traceback.format_exc())
+    return wrapped
