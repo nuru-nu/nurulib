@@ -554,7 +554,7 @@ class RateLimit(L.Signal):
             dt = rate = 0
         else:
             dt = (t - self.last_t)
-            rate = (value - self.last_value) / dt
+            rate = 0 if dt == 0 else (value - self.last_value) / dt
             if rate >= 0:
                 rate = min(rate, self.limit)
             else:
