@@ -153,7 +153,7 @@ export const Dump = (output, {network}) => {
 
   function update() {
     els.output.textContent = ''
-    if (!shown) return
+    if (!shown || !signals) return
     u.sorted(Object.entries(signals)).map(([k, v]) => {
       if (!matches(k)) return
       if (Array.isArray(v) && v.length && 'number' === typeof v[0]) {
