@@ -376,6 +376,25 @@ class Overridable(L.Signal):
 # value transformation
 ###############################################################################
 
+
+def linear(x):
+    return np.clip(x, 0, 1)
+
+
+def sinramp(x):
+    return np.sin(np.clip(x, 0, 1) * np.pi / 2)
+
+
+class F(L.Signal):
+    """Applies a function to a signal."""
+
+    def init(self, f=linear):
+        pass
+
+    def call(self, value):
+        return self.f(value)
+
+
 class Lin(L.Signal):
     """Linear transformation of scalar signal : x => x * mult + shift."""
 
@@ -389,19 +408,24 @@ class Lin(L.Signal):
         return value
 
 
-class To(L.Signal):
-    """Transforms range `src` to range `dst`."""
+class From(L.Signal):
+    """Transforms from `src` to 0..1"""
 
-    def init(
-        self, dst_min, dst_max, src_min=0, src_max=1,
-        f=lambda x: x, clip=False):
+    def init(self, src_min, src_max):
         pass
 
     def call(self, value):
-        x = (value - self.src_min) / (self.src_max - self.src_min)
-        if self.clip:
-            x = np.clip(x, 0, 1)
-        return x * (self.dst_max - self.dst_min) + self.dst_min
+        return (value - self.src_min) / (self.src_max - self.src_min)
+
+
+class To(L.Signal):
+    """Transforms from 0..1 to `dst`"""
+
+    def init(self, dst_min, dst_max):
+        pass
+
+    def call(self, value):
+        return value * (self.dst_max - self.dst_min) + self.dst_min
 
 
 class Thr(L.Signal):
