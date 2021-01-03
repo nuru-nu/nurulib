@@ -34,7 +34,11 @@ export const Monitor = (output, { monitor_def }) => {
     h.div('unknown', {style: 'margin-top: 20px; color: red'}),
   ).into(output).els
 
-  const lines = Lines(els.labels, graphs)
+  let graphs_no_hidden = {}
+  Object.keys(graphs).forEach(
+    group => graphs_no_hidden[group] = graphs[group].filter(
+      sig => !hidden.has(sig)))
+  const lines = Lines(els.labels, graphs_no_hidden)
   els.graph.addEventListener('click', lines.toggle)
   monitor_def.selected.forEach(lines.set_next_color)
   lines.toggle()
