@@ -76,6 +76,7 @@ export const Monitor = (output, { monitor_def }) => {
     }
 
     let features = ''
+    const ys = new Set()
     u.sorted(Object.keys(signals)).forEach(sig => {
       if (sig === 'state') {
         els.state.textContent = signals[sig]
@@ -87,7 +88,13 @@ export const Monitor = (output, { monitor_def }) => {
       }
       const color = lines.get_color(sig)
       if (color) {
-        const y = Math.floor((height - 1) * (1 - signals[sig]))
+        let y = Math.floor((height - lw) * (1 - signals[sig]))
+        if (y < height / 2) {
+          while (ys.has(y)) y += lw
+        } else {
+          while (ys.has(y)) y -= lw
+        }
+        ys.add(y)
         const lasty = lastys.hasOwnProperty(sig) ? lastys[sig] : y
         ctx.fillStyle = color
         ctx.fillRect(
