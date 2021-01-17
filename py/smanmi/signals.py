@@ -61,6 +61,41 @@ class NotInState(L.Signal):
 # pulses, ramps
 ###############################################################################
 
+class ActionOnOff(L.Signal):
+    """Generates 1 after action_on until action_off."""
+
+    def init(self, action_on, action_off):
+        self.state = 0
+
+    def call(self, action):
+        if action == self.action_on:
+            self.state = 1
+        elif action == self.action_off:
+            self.state = 0
+        return self.state
+
+
+class Ramps(L.Signal):
+    """Ramps a signal up and down based on 0/1 input signal."""
+
+    def init(self, slope_on, slope_off):
+        self.value = 0
+        self.lt = None
+
+    def call(self, value, t, action):
+        if self.lt is None:
+            self.lt = t
+            return self.value
+        dt = t - self.lt
+        self.lt = t
+
+        if value:
+            self.value += dt * self.slope_on
+        else:
+            self.value -= dt * self.slope_off
+        self.value = np.clip(self.value, 0, 1)
+        return self.value
+
 
 class TransientPulse(L.Signal):
     """Creates a pulse based on a transient on/off signal."""
@@ -385,6 +420,10 @@ def sinramp(x):
     return np.sin(np.clip(x, 0, 1) * np.pi / 2)
 
 
+def sinramp2(x):
+    return (np.sin(np.clip(x, 0, 1) * np.pi - np.pi / 2) + 1) / 2
+
+
 class F(L.Signal):
     """Applies a function to a signal."""
 
@@ -554,7 +593,6 @@ class Int(L.Signal):
     """Integrates the signal."""
 
     def init(self,
-             slope: float = 1,
              mod: Optional[int] = None):
         self.t = self.value = 0
 
