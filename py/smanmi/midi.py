@@ -185,6 +185,9 @@ class Midi:
             midi_out.send_message(command.bytes)
 
     def callback(self, port, message, timestamp):
+        if message[0] == 176:
+            # [176, 123, 0] : CC0 (src: Midi out HB2 "Post FX")
+            return
         command = Command.from_bytes(message)
         if command in self.sent:
             self.sent.remove(command)
