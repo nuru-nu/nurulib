@@ -608,7 +608,7 @@ class Int(L.Signal):
 class RateLimit(L.Signal):
     """Limits dvalue/dt."""
 
-    def init(self, limit):
+    def init(self, limit, down_limit=None):
         self.last_value = self.last_t = None
 
     def call(self, value, t):
@@ -620,7 +620,10 @@ class RateLimit(L.Signal):
             if rate >= 0:
                 rate = min(rate, self.limit)
             else:
-                rate = max(rate, -self.limit)
+                limit = self.down_limit
+                if limit is None:
+                    limit = self.limit
+                rate = max(rate, -limit)
             value = self.last_value + rate * dt
         self.last_t = t
         self.last_value = value
