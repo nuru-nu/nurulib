@@ -210,9 +210,15 @@ class Server:
                 self.stats(
                     'periodic_{}'.format(periodic_callback.websocket_path),
                     data)
-                for ws in self.websockets[periodic_callback.websocket_path]:
-                    await self.safe_send_bytes(
-                        periodic_callback.websocket_path, ws, data)
+                try:
+                    for ws in self.websockets[periodic_callback.websocket_path]:
+                        await self.safe_send_bytes(
+                            periodic_callback.websocket_path, ws, data)
+                except RuntimeError as e:
+                    if 'Set changed size during iteration' in str(e):
+                        self.logger.info('Set changed size during iteration')
+                    else:
+                        raise e
         except Exception as e:
             self.logger.error('periodic_loop ERROR: %r', e)
             self.logger.warning(traceback.format_exc())
