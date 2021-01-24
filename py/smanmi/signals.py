@@ -1,5 +1,6 @@
 """Signals transform sound to scalars."""
 
+import random
 import re
 from typing import Optional, Tuple
 
@@ -184,9 +185,29 @@ class RndRamp(L.Signal):
         return 1 - (t - self.t2) / (self.t3 - self.t2)
 
 
+class RndWalk(L.Signal):
+    """"Creates random walk (often used with MovingAverage)."""
+
+    def init(self, k):
+        self.value = 0.5
+        self.dv = 0
+        self.rddv = 1 / k
+        self.i = 0
+
+    def call(self, t):
+        self.dv += (random.random() - 0.5) * self.rddv
+        self.i += 1
+        while self.value + self.dv > 1.0:
+            self.dv -= self.rddv
+        while self.value + self.dv < 0.0:
+            self.dv += self.rddv
+        self.dv *= 0.9
+        self.value += self.dv
+        return self.value
+
+
 # features.wav
 ###############################################################################
-
 
 # Consider using crepe instead of aubio:
 # https://github.com/marl/crepe
@@ -239,9 +260,9 @@ class Overdrive(L.Signal):
     def call(self, features):
         return np.abs(features.wav > self.lim).sum() / len(features.wav)
 
+
 # features.logmel
 ###############################################################################
-
 
 class FreqBreadth(L.Signal):
     """Measures max - min freq where logmel > threshold."""
