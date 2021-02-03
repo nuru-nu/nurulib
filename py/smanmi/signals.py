@@ -445,14 +445,9 @@ def sinramp2(x):
     return (np.sin(np.clip(x, 0, 1) * np.pi - np.pi / 2) + 1) / 2
 
 
-class F(L.Signal):
-    """Applies a function to a signal."""
-
-    def init(self, f=linear):
-        pass
-
-    def call(self, value):
-        return self.f(value)
+def gauss_std(x, std=1):
+    g = stats.norm(0, std).pdf
+    return g(x) / g(0)
 
 
 class Lin(L.Signal):
@@ -532,9 +527,7 @@ class Norm(L.Signal):
 
     def call(self, value):
         m = value.max()
-        if m:
-            value /= m
-        return value
+        return value / m if m else value
 
 
 class Mod(L.Signal):
