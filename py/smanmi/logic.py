@@ -192,11 +192,18 @@ class SignalMult(SignalChain):
     def __call__(self, **kw):
         value1 = self.sig1(**kw)
         value2 = self.sig2(**kw)
+        # multiplying with constant
         if np.ndim(value1) == 0 or np.ndim(value2) == 0:
             return value1 * value2
+        # multiplying same shape
         if value1.shape == value2.shape:
             return value1 * value2
-        # Handy hack for animations.
+        # multiplying with envelope
+        if value1.ndim == 1 and value2.ndim == 2:
+            return value1[:, None] * value2
+        if value1.ndim == 2 and value2.ndim == 1:
+            return value2[:, None] * value1
+        # Vectors -> matrix.
         assert len(value1.shape) == 1, value1.shape
         assert len(value2.shape) == 1, value2.shape
         a = value1 if len(value1) < len(value2) else value2
