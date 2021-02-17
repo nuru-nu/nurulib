@@ -20,7 +20,7 @@ Note on Ableton Live:
 
 Note on testing the setup:
 
-1. `python -m smanmi.midi --cmd_port=7000`
+1. `python -m smanmi.midi --signal_in_port=7000`
 2. `echo '{"midi": "0: C2 On"}' | nc -u 127.0.0.2 7000
 """
 
@@ -110,7 +110,7 @@ class Command:
         self.name = f'{channel}: X{number}'
         self.value = value
         self.bytes = (
-            0xA0 + channel - 1,
+            0xB0 + channel - 1,
             number,
             value,
         )
@@ -242,9 +242,9 @@ def midi2signal(command, logger):
 
 class MidiForwarder:
 
-    def __init__(self, midi, cmd_address_port, signal_address_port, logger):
-        self.cmd_address, self.cmd_port = cmd_address_port
-        self.signal_address, self.signal_port = signal_address_port
+    def __init__(self, midi, signal_in, signal_out, logger):
+        self.signal_in_address, self.signal_in_port = signal_in
+        self.signal_out_address, self.port = signal_out
         self.logger = logger
         self.midi = midi
         self.midi.add_listener(self.got_midi)
@@ -256,19 +256,19 @@ class MidiForwarder:
         loop = asyncio.get_event_loop()
         loop.set_debug(True)
         loop.set_exception_handler(self.exception_handler)
-        if self.cmd_port:
+        if self.signal_in_port:
             self.logger.info(
-                'Listening on %s:%d', self.cmd_address, self.cmd_port)
+                'Listening on %s:%d', self.signal_in_address, self.signal_in_port)
             loop.run_until_complete(
                 loop.create_datagram_endpoint(
                     lambda: UdpInbound(self, self.logger),
-                    local_addr=(self.cmd_address, self.cmd_port)))
-        if self.signal_port:
+                    local_addr=(self.signal_in_address, self.signal_in_port)))
+        if self.port:
             self.logger.info(
-                'Sending UDP to %s:%d', self.signal_address, self.signal_port)
+                'Sending UDP to %s:%d', self.signal_out_address, self.port)
             loop.run_until_complete(loop.create_datagram_endpoint(
                 lambda: UdpOutbound(self),
-                remote_addr=(self.signal_address, self.signal_port)))
+                remote_addr=(self.signal_out_address, self.port)))
         loop.run_forever()
 
     def register_transport(self, transport):
@@ -299,15 +299,15 @@ class MidiForwarder:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Bridges UDP to MIDI.')
 
-    parser.add_argument('--cmd_address', type=str, default='127.0.0.1',
+    parser.add_argument('--signal_in_address', type=str, default='127.0.0.1',
                         help='IP address to listen at.')
-    parser.add_argument('--cmd_port', type=int, default=0,
-                        help='UDP cmd_port to listen at for commands.')
+    parser.add_argument('--signal_in_port', type=int, default=0,
+                        help='UDP port to listen at for incoming signals.')
 
-    parser.add_argument('--signal_address', type=str, default='127.0.0.1',
+    parser.add_argument('--signal_out_address', type=str, default='127.0.0.1',
                         help='IP address to send UDP packets to.')
-    parser.add_argument('--signal_port', type=int, default=0,
-                        help='UDP signal_port to forwarad MIDI signals to.')
+    parser.add_argument('--signal_out_port', type=int, default=0,
+                        help='UDP port to forwarad MIDI signals to.')
 
     parser.add_argument('--send', type=str, default=None,
                         help='Send single command.')
@@ -320,11 +320,11 @@ if __name__ == '__main__':
     if args.send:
         midi.send(args.send)
 
-    if args.cmd_port or args.signal_port:
+    if args.signal_in_port or args.port:
         forwarder = MidiForwarder(
             midi=midi,
-            cmd_address_port=(args.cmd_address, args.cmd_port),
-            signal_address_port=(args.signal_address, args.signal_port),
+            cmd_address_port=(args.signal_in_address, args.signal_in_port),
+            signal_address_port=(args.signal_out_address, args.port),
             logger=logger,
         )
         forwarder.start()
