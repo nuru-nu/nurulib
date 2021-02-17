@@ -185,6 +185,7 @@ export const ui = (() => {
     const range = h.input(name, {type: 'range', min: 0, max: 1, step: .01, value}).el
     const update = updater(range, () => range.value)
     range.addEventListener('input', update)
+    range.name = name
     return range
   }
 
