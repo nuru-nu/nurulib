@@ -308,20 +308,11 @@ class StreamingStats:
         self.totaltotal = {}
         self.n = {}
         self.hz = hz
+        self.last_ctrlc = 0
 
     def catch_ctrlc(self, shutdown_callback):
-        sigint.register_ctrlc_handler(self.dump_reset)
+        sigint.register_ctrlc_handler(self.sigint_handler)
         sigint.register_ctrlc2_handler(shutdown_callback)
-
-    def sigint_handler(self, *_):
-        print()
-        if time.time() - self.last_ctrlc < 1:
-            self.shutdown_callback()
-            self.logger.warning(
-                '### caught CTRL-C twice within a second => shutdown ###')
-            return
-        self.dump_reset()
-        self.last_ctrlc = time.time()
 
     def dump(self):
         """Dumps stats to logger.info()."""
@@ -347,8 +338,10 @@ class StreamingStats:
             self.total[name] += len(s)
             self.totaltotal[name] += len(s)
         dt = time.time() - self.t0
-        if dt * self.hz > 1:
+        if dt * self.hz >= 1:
             self.dump_reset()
+            return True
+        return False
 
 
 def pad_fadecandy(values):
