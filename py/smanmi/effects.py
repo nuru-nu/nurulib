@@ -7,6 +7,9 @@ import scipy, scipy.io.wavfile
 from . import perf, util
 
 
+# TODO: Rewrite these as logic.Signal?
+
+
 settings = None
 def init(settings_):
     global settings
@@ -26,9 +29,9 @@ class Effector:
     @perf.measure('effector')
     def __call__(self, input_data, signals):
         # (not checking this anymore with streaming interface)
-        # assert len(input_data) == settings.hop_size, (
+        # assert len(input_data) == settings.buf_secs, (
         #     'Expected input_data={}!={}'.format(
-        #         settings.hop_size, len(input_data)))
+        #         settings.buf_secs, len(input_data)))
         input_data = util.int16_to_float(input_data)
 
         output_datas = [
@@ -131,11 +134,11 @@ class Echo(Effect):
         self.delay_s = delay_s
         self.delay_n = int(delay_s / settings.hop_secs)
         self.coeff = coeff
-        self.bufs = np.zeros((self.delay_n, settings.hop_size))
+        self.bufs = np.zeros((self.delay_n, settings.buf_secs))
         self.i = 0
 
     def __call__(self, buf, signals):
-        buf = buf[:settings.hop_size]
+        buf = buf[:settings.buf_secs]
         n = self.bufs.shape[0]
         delayed = self.bufs[self.i % n].copy()
         self.bufs[self.i % n] = buf + delayed * self.coeff
@@ -148,11 +151,11 @@ class Delay(Effect):
     def __init__(self, delay_s=0.2):
         self.delay_s = delay_s
         self.delay_n = int(delay_s / settings.hop_secs)
-        self.bufs = np.zeros((self.delay_n, settings.hop_size))
+        self.bufs = np.zeros((self.delay_n, settings.buf_secs))
         self.i = 0
 
     def __call__(self, buf, signals):
-        buf = buf[:settings.hop_size]
+        buf = buf[:settings.buf_secs]
         n = self.bufs.shape[0]
         delayed = self.bufs[self.i % n].copy()
         self.bufs[self.i % n] = buf
@@ -188,24 +191,18 @@ class Sinusoidal(Effect):
     def __init__(self, hz, A=0.2, rate=None):
         if rate is None: rate = settings.out1_rate
         T = int(rate / hz)
-        n = np.ceil(settings.hop_size / T)
+        n = int(np.ceil(settings.buf_secs * rate / T))
         self.buf = A * np.sin(np.linspace(0, n * 2 * np.pi, n * T))
 
     def __call__(self, buf, signals):
         self.buf = np.roll(self.buf, shift=-len(buf))
-        return self.buf[:len(buf)]
+        return self.buf[:len(buf)].copy()
 
 
-class Square(Effect):
+class Square(Sinusoidal):
     def __init__(self, hz, A=0.2, rate=None):
-        if rate is None: rate = settings.out1_rate
-        T = int(rate / hz)
-        n = np.ceil(settings.hop_size / T)
-        self.buf = A * np.sin(np.linspace(0, n * 2 * np.pi, n * T))
-        self.buf = np.repeat(np.concatenate([
-            np.zeros(T // 2, dtype=np.float32),
-            A * np.ones(T - T // 2, dtype=np.float32),
-        ]), n)
+        super().__init__(hz, A, rate)
+        self.buf = 2 * A * (self.buf > 0) - A
 
     def __call__(self, buf, signals):
         self.buf = np.roll(self.buf, shift=-len(buf))
@@ -288,7 +285,7 @@ class RndSub(Effect):
         self.sample_minmax = sample_minmax
         self.break_minmax = break_minmax
         self.ramp_minmax = ramp_minmax
-        self.zeros = np.zeros(settings.hop_size)
+        self.zeros = np.zeros(settings.buf_secs)
         self.state = 'on'
         self.next()
 
@@ -379,6 +376,18 @@ class Loop(Effect):
             buf = np.concatenate(
                 buf, self.wav[self.i - (n - len(buf)): self.i])
         return buf
+
+
+class Amplitude(Effect):
+
+    def __init__(self, signal):
+        self.signal = signal
+        self.value = 0
+
+    def __call__(self, buf, signals):
+        value = np.clip(0, 1, signals.get(self.signal, 0))
+        self.value += 0.5 * (value - self.value)
+        return buf * self.value
 
 
 class RandomLoop(Effect):
