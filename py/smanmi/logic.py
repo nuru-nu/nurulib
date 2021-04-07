@@ -245,6 +245,12 @@ class Named(Signal):
         return kw.get(self.name, self.default)
 
 
+class NamedProxy:
+    def __getattr__(self, name):
+        return Named(name)
+N = NamedProxy()
+
+
 # SignalRunner
 ###############################################################################
 
