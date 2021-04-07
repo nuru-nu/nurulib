@@ -310,7 +310,7 @@ class StreamingStats:
         self.hz = hz
 
     def catch_ctrlc(self, shutdown_callback):
-        sigint.register_ctrlc_handler(self.sigint_handler)
+        sigint.register_ctrlc_handler(self.dump)
         sigint.register_ctrlc2_handler(shutdown_callback)
 
     def sigint_handler(self, *_):
