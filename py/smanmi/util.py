@@ -311,7 +311,7 @@ class StreamingStats:
         self.last_ctrlc = 0
 
     def catch_ctrlc(self, shutdown_callback):
-        sigint.register_ctrlc_handler(self.sigint_handler)
+        sigint.register_ctrlc_handler(self.dump)
         sigint.register_ctrlc2_handler(shutdown_callback)
 
     def dump(self):
