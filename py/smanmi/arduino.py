@@ -47,24 +47,21 @@ def stop():
 stats.catch_ctrlc(stop)
 
 failures = 0
-while failures < 10:
+while running and failures < 10:
     try:
         line = dev.readline().decode('utf8').strip('\n\r')
+        if line:
+            value = int(line)
         failures = 0
-    except serial.serialutil.SerialException:
+    except Exception as e:
         failures += 1
-        print(f'Caught SerialException ({failures}) - probably Arduino restarted.')
-        time.sleep(1)
-        continue
-    except UnicodeDecodeError:
-        failures += 1
-        print('Caught UnicodeDecodeError ({failures}) - probably Arduino restarted.')
+        print(f'Caught {e} ({failures}) - probably Arduino restarted.')
         time.sleep(1)
         continue
     if line:
-        value = int(line)
+        # maxval = max(maxval, value)
         network.send(args.signal_port, {
-            args.signal_name: min(1, value / 100),
+            args.signal_name: value,
         })
         if stats(args.signal_name):
             logger.info('Current value=%d', value)
