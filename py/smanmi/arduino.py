@@ -1,6 +1,7 @@
 import argparse
 import glob
 import socket
+import time
 
 import serial
 
@@ -31,7 +32,7 @@ parser.add_argument(
 )
 args = parser.parse_args()
 logger = util.createLogger('arduino')
-path = sorted(glob.glob('/dev/cu.usbmodem*'))[0]
+path = sorted(glob.glob(args.dev_glob))[0]
 logger.info('Opening device %s', path)
 dev = serial.Serial(path, baudrate=9600, timeout=2.)
 logger.info(
@@ -45,8 +46,21 @@ def stop():
     running = False
 stats.catch_ctrlc(stop)
 
-while running:
-    line = dev.readline().decode('utf8').strip('\n\r')
+failures = 0
+while failures < 10:
+    try:
+        line = dev.readline().decode('utf8').strip('\n\r')
+        failures = 0
+    except serial.serialutil.SerialException:
+        failures += 1
+        print(f'Caught SerialException ({failures}) - probably Arduino restarted.')
+        time.sleep(1)
+        continue
+    except UnicodeDecodeError:
+        failures += 1
+        print('Caught UnicodeDecodeError ({failures}) - probably Arduino restarted.')
+        time.sleep(1)
+        continue
     if line:
         value = int(line)
         network.send(args.signal_port, {
