@@ -308,10 +308,12 @@ class StreamingStats:
         self.totaltotal = {}
         self.n = {}
         self.hz = hz
+        self.info_getter = None
 
-    def catch_ctrlc(self, shutdown_callback):
+    def catch_ctrlc(self, shutdown_callback, info_getter=None):
         sigint.register_ctrlc_handler(self.dump)
         sigint.register_ctrlc2_handler(shutdown_callback)
+        self.info_getter = info_getter
 
     def sigint_handler(self, *_):
         print()
@@ -322,9 +324,10 @@ class StreamingStats:
         dt = time.time() - self.t0
         for name in sorted(self.total):
             self.logger.debug(
-                'stats[%s] : %.1f fps %.1f kps (sum %.1fM)',
+                'stats[%s] : %.1f fps %.1f kps (sum %.1fM) -- %s',
                 name, self.n[name] / dt, self.total[name] / dt / 1e3,
-                self.totaltotal[name] / 1e6)
+                self.totaltotal[name] / 1e6,
+                self.info_getter() if self.info_getter else '')
 
     def dump_reset(self):
         self.dump()

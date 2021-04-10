@@ -40,31 +40,38 @@ logger.info(
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 running = True
-stats = util.StreamingStats(logger)
+failures = 0
+values = None
+
+def info_getter():
+    global values
+    return values
 def stop():
     global running
     running = False
-stats.catch_ctrlc(stop)
+stats = util.StreamingStats(logger)
+stats.catch_ctrlc(stop, info_getter)
 
-failures = 0
 while running and failures < 10:
+    values = None
     try:
         line = dev.readline().decode('utf8').strip('\n\r')
         if line:
-            value = int(line)
+            values = [int(value) for value in line.split(',')]
         failures = 0
     except Exception as e:
         failures += 1
         print(f'Caught {e} ({failures}) - probably Arduino restarted.')
         time.sleep(1)
         continue
-    if line:
+    if values:
         # maxval = max(maxval, value)
         network.send(args.signal_port, {
-            args.signal_name: value,
+            f'{args.signal_name}_{i}': value
+            for i, value in enumerate(values)
         })
         if stats(args.signal_name):
-            logger.info('Current value=%d', value)
+            logger.info('Current values=%s', values)
 print()
 print('closing...')
 dev.close()
