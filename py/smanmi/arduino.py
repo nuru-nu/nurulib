@@ -19,7 +19,7 @@ parser.add_argument(
     help='What port to send signal to.'
 )
 parser.add_argument(
-    '--baudrate', type=int, default=9600,
+    '--baudrate', type=int, default=57600,
     help='What baudrate to use.'
 )
 parser.add_argument(
@@ -34,18 +34,18 @@ args = parser.parse_args()
 logger = util.createLogger('arduino')
 path = sorted(glob.glob(args.dev_glob))[0]
 logger.info('Opening device %s', path)
-dev = serial.Serial(path, baudrate=9600, timeout=2.)
+dev = serial.Serial(path, baudrate=args.baudrate, timeout=2.)
 logger.info(
     'Sending signals "%s" to port %d', args.signal_name, args.signal_port)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 running = True
 failures = 0
-values = None
+last_values = values = None
 
 def info_getter():
-    global values
-    return values
+    global last_values
+    return last_values
 def stop():
     global running
     running = False
@@ -57,7 +57,7 @@ while running and failures < 10:
     try:
         line = dev.readline().decode('utf8').strip('\n\r')
         if line:
-            values = [int(value) for value in line.split(',')]
+            last_values = values = [int(value) for value in line.split(',')]
         failures = 0
     except Exception as e:
         failures += 1
