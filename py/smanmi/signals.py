@@ -1,5 +1,6 @@
 """Signals transform sound to scalars."""
 
+import glob
 import random
 import re
 from typing import Optional, Tuple
@@ -57,6 +58,25 @@ class NotInState(L.Signal):
 
     def call(self, value, state):
         return value * (state.state != self.state)
+
+
+class RandomNCA(L.Signal):
+
+    def init(self, base='nca', timeouts_secs=3*60):
+        self.names = [
+            path.split('/')[-1][:-4] for path in glob.glob(f'{base}/*.npy')]
+        self.t = 0
+
+    def _next(self):
+        self.value = self.names[random.randint(0, len(self.names))]
+
+    def call(self, t, action):
+        if action == 'rnca=next':
+            self.t = 0
+        if t - self.t > self.timeouts_secs:
+            self._next()
+            self.t = t
+        return self.value
 
 
 # pulses, ramps
@@ -349,8 +369,29 @@ class KinectDistance(L.Signal):
         ]
 
 
+class KinectMovement(L.Signal):
+    """Quantifies overall movement."""
+
+    def init(self):
+        self.last_cms = {}
+
+    def call(self, t, people):
+        seen = set()
+        dsum = 0
+        for person in people:
+            last_cm = self.last_cms.get(person['id'])
+            if last_cm is not None:
+                dsum += np.linalg.norm(last_cm - person['cm'])
+                seen.add(person['id'])
+            self.last_cms[person['id']] = np.array(person['id'])
+        self.last_cms = {
+            k: v for k, v in self.last_cms.items() if k not in seen
+        }
+        return dsum
+
+
 class KinectFix(L.Signal):
-    """Drops kinect phantoms."""
+    """Cleans up Kinect signal."""
 
     def init(self, phantoms, dphi):
         ...
@@ -370,7 +411,7 @@ class KinectFix(L.Signal):
             fix(person)
             for person in value
             if not np.any([
-                np.allclose(person['cm'], phantom)
+                np.allclose(sorted(person['cm']), sorted(phantom))
                 for phantom in self.phantoms
             ])
         ]
@@ -694,7 +735,9 @@ class Exponential(L.SignalLast):
     def init(self, alpha):
         pass
 
+    def call(self, t, value):
         return self.lastout.value + (value - self.lastout.value) * (
+            1 - self.alpha) * (t - self.lastin.t)
 
 
 class Median(L.Signal):
