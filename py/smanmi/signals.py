@@ -694,9 +694,7 @@ class Exponential(L.SignalLast):
     def init(self, alpha):
         pass
 
-    def call(self, value):
-        return self.lastout.value + (
-            value - self.lastout.value) * (1 - self.alpha)
+        return self.lastout.value + (value - self.lastout.value) * (
 
 
 class Median(L.Signal):
