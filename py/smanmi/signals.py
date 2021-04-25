@@ -506,7 +506,7 @@ class Hyst(L.SignalLast):
 
 
 class Tocos(L.Signal):
-    """Maps 0..1 with cosine smoothing."""
+    """Maps 0..1 with cosine smoothing (0 -> 1 -> 0)."""
 
     def call(self, value):
         return (1 + np.cos((value - 1) * np.pi)) / 2
