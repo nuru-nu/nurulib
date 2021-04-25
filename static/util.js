@@ -112,7 +112,7 @@ export const h = (function() {
   let tags = [
     'a', 'div', 'span', 'button', 'pre', 'canvas', 'br',
     'input', 'label', 'select', 'option', 'table', 'tr', 'td',
-    'textarea',
+    'textarea', 'img',
   ]
   tags.forEach(tag => {
     ns[tag] = function() {

@@ -349,6 +349,33 @@ class KinectDistance(L.Signal):
         ]
 
 
+class KinectFix(L.Signal):
+    """Drops kinect phantoms."""
+
+    def init(self, phantoms, dphi):
+        ...
+
+    def call(self, value):
+        def fix(person):
+            d = dict(**person)
+            x, y, z = d['cm']
+            dphi = self.dphi / 360 * 2 * np.pi
+            x, y = np.array([x, y]) @ np.array([
+                [np.cos(dphi), -np.sin(dphi)],
+                [np.sin(dphi),  np.cos(dphi)],
+            ])
+            d['cm'] = [x, y, z]
+            return d
+        return [
+            fix(person)
+            for person in value
+            if not np.any([
+                np.allclose(person['cm'], phantom)
+                for phantom in self.phantoms
+            ])
+        ]
+
+
 # utils
 ###############################################################################
 
