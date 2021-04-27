@@ -36,48 +36,57 @@ parser.add_argument(
 )
 args = parser.parse_args()
 logger = util.createLogger('arduino')
-path = sorted(glob.glob(args.dev_glob))[0]
-logger.info('Opening device %s', path)
-dev = serial.Serial(path, baudrate=args.baudrate, timeout=2.)
-logger.info(
-    'Sending signals to port %d', args.signal_port)
-sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
 running = True
-failures = 0
-last_values = values = None
-
-def info_getter():
-    global last_values
-    return last_values
 def stop():
     global running
     running = False
-stats = util.StreamingStats(logger)
-stats.catch_ctrlc(stop, info_getter)
 
-while running and failures < 10:
-    values = None
-    signal_name = None
-    try:
-        line = dev.readline().decode('utf8').strip('\n\r')
-        signal_name = sensors[line[0]]
-        if line:
-            last_values = values = [int(value) for value in line[2:].split(',')]
-        failures = 0
-    except Exception as e:
-        failures += 1
-        print(f'Caught {e} ({failures}) - probably Arduino restarted.')
-        time.sleep(1)
-        continue
-    if values and signal_name:
-        # maxval = max(maxval, value)
-        network.send(args.signal_port, {
-            f'{signal_name}_{i}': value
-            for i, value in enumerate(values)
-        })
-        if stats(signal_name):
-            logger.info('Current values=%s', values)
+def sensor_read(path):
+    logger.info('Opening device %s', path)
+    dev = serial.Serial(path, baudrate=args.baudrate, timeout=2.)
+    logger.info(
+        'Sending signals to port %d', args.signal_port)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    failures = 0
+    last_values = values = None
+    def info_getter():
+        nonlocal last_values
+        return last_values
+    stats = util.StreamingStats(logger)
+    stats.catch_ctrlc(stop, info_getter)
+
+    while running and failures < 10:
+        values = None
+        signal_name = None
+        try:
+            line = dev.readline().decode('utf8').strip('\n\r')
+            signal_name = sensors[line[0]]
+            if line:
+                last_values = values = [int(value) for value in line[2:].split(',')]
+            failures = 0
+        except Exception as e:
+            failures += 1
+            print(f'Caught {e} ({failures}) - probably Arduino restarted.')
+            time.sleep(1)
+            continue
+        if values and signal_name:
+            # maxval = max(maxval, value)
+            network.send(args.signal_port, {
+                f'{signal_name}_{i}': value
+                for i, value in enumerate(values)
+            })
+            if stats(signal_name):
+                logger.info('Current values=%s', values)
+
+paths = sorted(glob.glob(args.dev_glob))
+logger.info(f'Found {len(paths)} devices at paths {paths}')
+
+threads = []
+for path in paths:
+    threads.append(threading.Thread(target=sensor_read, args=(path,)))
+    threads[-1].start()
 
 print()
 print('closing...')
