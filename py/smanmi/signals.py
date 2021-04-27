@@ -660,6 +660,11 @@ class Dict(L.Signal):
         return self.dictionary[self.name]
 
 
+def fexp(x, gamma=1):
+    """Use S.From(max, min) | S.F(S.fexp) | S.To(0, dst)."""
+    return (np.exp(x * gamma) - 1) / np.exp(gamma)
+
+
 class F(L.Signal):
     """Calculates a function on previous signal with optional parameters."""
 
