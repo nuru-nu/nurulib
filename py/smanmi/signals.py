@@ -27,15 +27,19 @@ def init(settings_):
 ###############################################################################
 
 class ActionLatch(L.Signal):
-    """Keeps last from a choice of actions with prefix."""
+    """Keeps value from action by regex."""
 
-    def init(self, regex, value=None, converter=lambda x: x):
+    def init(self, regex, value=None, converter=lambda x: x, sig=None):
         self._regex = re.compile(regex)
 
     def call(self, action):
+        if self.value is None and self.sig is not None:
+            print('None', '->', self.sig)
+            self.value = self.sig
         if action:
             m = self._regex.match(action)
             if m:
+                print('->', m.group(1))
                 self.value = self.converter(m.group(1))
         return self.value
 
