@@ -368,3 +368,41 @@ export function debounce(fun, ms) {
   }
   debounced.set(fun, id)
 }
+
+const observed = new Map()
+const intersecting = new Set()
+document.addEventListener('visibilitychange', () => {
+  console.log('visibilityState', document.visibilityState)
+  intersecting.forEach(target => {
+    const cbs = observed.get(target) || {}
+    if (document.visibilityState === 'visible' && cbs.start) cbs.start()
+    if (document.visibilityState === 'hidden' && cbs.stop) cbs.stop()
+  })
+}, false);
+const observer = new IntersectionObserver((entries, observer) => {
+  entries.forEach(entry => {
+    const cbs = observed.get(entry.target) || {}
+    if (entry.isIntersecting) {
+      intersecting.add(entry.target)
+      if (cbs.start) cbs.start()
+    } else {
+      if (intersecting.has(entry.target)) intersecting.delete(entry.target)
+      if (cbs.stop) cbs.stop()
+    }
+  })
+})
+// Use like this: observe(target).start(cb).stop(cb)
+export const observe = (target) => {
+  function adder(which) {
+    function inner(callback) {
+      const cbs = observed.get(target) || {}
+      cbs[which] = callback
+      observed.set(target, cbs)
+      return ret
+    }
+    return inner
+  }
+  observer.observe(target)
+  const ret = {start: adder('start'), stop: adder('stop')}
+  return ret
+}

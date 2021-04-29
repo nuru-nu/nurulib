@@ -1,4 +1,4 @@
-import { h, ui, u, colors } from './util.js'
+import { h, ui, u, colors, observe } from './util.js'
 
 // Shows signals; monitor_def = {
 //     graphs: {
@@ -56,9 +56,12 @@ export const Monitor = (output, { monitor_def }) => {
 
   const ctx = els.graph.getContext('2d')
 
+  let running = true
+  // observe(els.graph).start(() => running=true).stop(() => running=false)
+
   let t=-1, lastys={}, gt = 0
-  const special = new Set(['logmel', 'mfccs', 't', 'signalin'])
   function listener(data) {
+    if (!running) return
     signals = data
     t++
     if (signals.state.indexOf('frozen') !== -1) {
@@ -133,7 +136,7 @@ export const Monitor = (output, { monitor_def }) => {
 }
 
 export const Dump = (output, {network}) => {
-  const els = h.div().of(
+  const els = h.div('cont').of(
     ui.h(
       ui.toggle('dump'),
       ' - filter: ',
@@ -189,10 +192,13 @@ export const Dump = (output, {network}) => {
     })
   }
 
+  let running = true
+  observe(els.cont).start(() => running=true).stop(() => running=false)
+
   let signals = null
   network.listenJson('signals', function(data) {
     signals = data
-    if (shown && live) update()
+    if (shown && live && running) update()
   })
 }
 
