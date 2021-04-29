@@ -64,25 +64,6 @@ class NotInState(L.Signal):
         return value * (state.state != self.state)
 
 
-class RandomNCA(L.Signal):
-
-    def init(self, base='nca', timeouts_secs=3*60):
-        self.names = [
-            path.split('/')[-1][:-4] for path in glob.glob(f'{base}/*.npy')]
-        self.t = 0
-
-    def _next(self):
-        self.value = self.names[random.randint(0, len(self.names))]
-
-    def call(self, t, action):
-        if action == 'rnca=next':
-            self.t = 0
-        if t - self.t > self.timeouts_secs:
-            self._next()
-            self.t = t
-        return self.value
-
-
 # pulses, ramps
 ###############################################################################
 

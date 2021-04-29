@@ -14,7 +14,8 @@ from . import util
 # TODO: Make work with multiple Arduinos (different signal names).
 
 sensors = {
-    "S" : "sonar"
+    "S" : "sonar",
+    "P" : "pir"
 }
 
 parser = argparse.ArgumentParser(description='Reads data from Arduino.')
@@ -31,7 +32,7 @@ parser.add_argument(
     help='Signal name.'
 )
 parser.add_argument(
-    '--dev_glob', type=str, default='/dev/cu.usbmodem*',
+    '--dev_glob', nargs='+', type=str, default='/dev/cu.usbmodem*',
     help='Glob to match device (alphabetically first match is used).'
 )
 args = parser.parse_args()
@@ -65,6 +66,7 @@ def sensor_read(path):
             signal_name = sensors[line[0]]
             if line:
                 last_values = values = [int(value) for value in line[2:].split(',')]
+
             failures = 0
         except Exception as e:
             failures += 1
@@ -79,8 +81,12 @@ def sensor_read(path):
             })
             if stats(signal_name):
                 logger.info('Current values=%s', values)
+    
+    logger.info('\nClosing=%s', path)
+    dev.close()
 
-paths = sorted(glob.glob(args.dev_glob))
+paths = sorted([p for path in args.dev_glob for p in glob.glob(path)])
+
 logger.info(f'Found {len(paths)} devices at paths {paths}')
 
 threads = []
@@ -88,6 +94,4 @@ for path in paths:
     threads.append(threading.Thread(target=sensor_read, args=(path,)))
     threads[-1].start()
 
-print()
-print('closing...')
-dev.close()
+
