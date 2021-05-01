@@ -141,6 +141,7 @@ export const ui = (() => {
       listeners.forEach(listener => listener(getter()))
       return el
     }
+    el.get = getter
     return () => {
       Array.from(listeners).map(listener => listener(getter()))
     }

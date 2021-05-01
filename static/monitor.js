@@ -38,11 +38,12 @@ export const Monitor = (output, { monitor_def }) => {
   addsigs(hidden)
 
   const els = ui.v(
+    h.div().of(ui.toggle('logmel')),
     h.canvas('graph', {width, height}),
-    h.div('labels', {style: `width: ${width}px`}),
-    h.div('state', {style: 'margin-top: 20px'}),
+    h.div('labels', { style: `width: ${width}px` }),
+    h.div('state', { style: 'margin-top: 20px' }),
     h.div().of(groups),
-    h.div('unknown', {style: 'margin-top: 20px; color: red'}),
+    h.div('unknown', { style: 'margin-top: 20px; color: red' }),
   ).into(output).els
 
   let graphs_no_hidden = {}
@@ -80,7 +81,7 @@ export const Monitor = (output, { monitor_def }) => {
     ctx.fillStyle = '#000'
     ctx.fillRect(width - speed - 1, 0, speed, height)
 
-    if (signals.hasOwnProperty('logmel')) {
+    if (els.logmel.get() && signals.hasOwnProperty('logmel')) {
       signals.logmel.forEach((value, i) => {
         value = (value + 5) / 10
         value = Math.min(1, Math.max(0, value))
