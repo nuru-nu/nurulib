@@ -364,21 +364,27 @@ class KinectDistance(L.Signal):
 class KinectMovement(L.Signal):
     """Quantifies overall movement."""
 
-    def init(self):
-        self.last_cms = {}
+    def init(self, avg):
+        self.cms = {}
 
     def call(self, t, people):
         seen = set()
-        dsum = 0
         for person in people:
-            last_cm = self.last_cms.get(person['id'])
-            if last_cm is not None:
-                dsum += np.linalg.norm(last_cm - person['cm'])
             seen.add(person['id'])
-            self.last_cms[person['id']] = np.array(person['id'])
-        self.last_cms = {
-            k: v for k, v in self.last_cms.items() if k in seen
+            cms = self.cms.get(person['id'], [])
+            self.cms[person['id']] = [person['cm']] + cms[:2 * self.avg - 1]
+            # util.printn(self, 20, person['id'], person['cm'])
+        self.cms = {
+            k: v for k, v in self.cms.items() if k in seen
         }
+        dsum = 0
+        for cms in self.cms.values():
+            if len(cms) == 2 * self.avg:
+                cm1 = np.array(cms[:self.avg]).mean(axis=0)
+                cm2 = np.array(cms[self.avg:]).mean(axis=0)
+                dsum += np.linalg.norm(cm1 - cm2)
+                util.printn(self, 20, '', cm1, '\n', cm2, cm1 - cm2, np.linalg.norm(cm1 - cm2))
+        util.printn(self, 20, dsum)
         return dsum
 
 
