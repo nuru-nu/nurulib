@@ -157,12 +157,12 @@ def pythonize(d):
     return d
 
 
-def serialize(signals):
+def serialize(signals, indent=None):
     """Serializes `signals` to UTF8, also serializing "state" etc."""
-    for name, value in signals.items():
-        if name in serializers:
-            signals[name] = repr(signals[name])
-    return json.dumps(pythonize(signals)).encode('utf8')
+    return json.dumps(pythonize({
+        name: repr(sig) if name in serializers else sig
+        for name, sig in signals.items()
+    }), indent=indent).encode('utf8')
 
 
 def deserialize(msg):
@@ -170,10 +170,10 @@ def deserialize(msg):
     if isinstance(msg, bytes):
         msg = msg.decode('utf8')
     signals = json.loads(msg)
-    for name, cls in serializers.items():
-        if name in signals:
-            signals[name] = cls(signals[name])
-    return signals
+    return {
+        name: serializers.get(name, lambda x: x)(sig)
+        for name, sig in signals.items()
+    }
 
 
 class Streamer:
