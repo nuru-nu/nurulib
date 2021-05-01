@@ -27,15 +27,22 @@ def init(settings_):
 ###############################################################################
 
 class ActionLatch(L.Signal):
-    """Keeps value from action by regex."""
+    """Keeps value from action by regex.
+    
+    Usage:
+      sigs = {'mode': ActionLatch('set_mode=(.*)', N.mode)}
+    """
 
-    def init(self, regex, value=None, converter=lambda x: x, sig=None):
+    def init(self, regex, sig=None, converter=lambda x: x):
         self._regex = re.compile(regex)
+        self.value = None
+        print('ActionLatch', self.value)
 
     def call(self, action):
-        if self.value is None and self.sig is not None:
-            print('None', '->', self.sig)
-            self.value = self.sig
+        if self.value is None:
+            if self.sig is not None:
+                print(self.regex, 'None', '->', self.sig)
+                self.value = self.sig
         if action:
             m = self._regex.match(action)
             if m:
