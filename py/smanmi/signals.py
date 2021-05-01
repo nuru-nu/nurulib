@@ -374,10 +374,10 @@ class KinectMovement(L.Signal):
             last_cm = self.last_cms.get(person['id'])
             if last_cm is not None:
                 dsum += np.linalg.norm(last_cm - person['cm'])
-                seen.add(person['id'])
+            seen.add(person['id'])
             self.last_cms[person['id']] = np.array(person['id'])
         self.last_cms = {
-            k: v for k, v in self.last_cms.items() if k not in seen
+            k: v for k, v in self.last_cms.items() if k in seen
         }
         return dsum
 
