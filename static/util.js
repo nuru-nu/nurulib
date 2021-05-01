@@ -127,7 +127,7 @@ export const h = (function() {
 // ui.choice({values: ['A', 'B']})
 // ui.dropdown({values: ['A', 'B']})
 // ui.toggle(name)
-// ui.range(name)
+// ui.range(name, {network})
 // *[.change(value =>)][.init()]
 export const ui = (() => {
 
@@ -179,25 +179,79 @@ export const ui = (() => {
     return select
   }
 
-  const range = (name, opts) => {
-    opts = opts || {}
-    const value = opts.value || 0
-    const range = h.input(name, {type: 'range', min: 0, max: 1, step: .01, value}).el
-    const update = updater(range, () => range.value)
-    range.addEventListener('input', update)
-    range.name = name
-    return range
+  function range(name, options) {
+    function make_range(name, opts) {
+      opts = opts || {}
+      const value = opts.value || 0
+      const range = h.input(name, {
+        min: 0, max: 1, step: .01, value,
+        type: 'range',
+        style: 'flex-grow:1'
+      }).el
+      const update = updater(range, () => range.value)
+      range.addEventListener('input', update)
+      return range
+    }
+    options = options || {}
+    const network = options.network
+    const min = options.min || 0
+    const max = options.max || 1
+    const initial = options.inital || (max - min) / 2
+    const gamma = options.gamma || 1
+    const trafo = options.trafo || [(x => x**gamma), (x => x**(1/gamma))]  // function & inverse
+    const digits = options.digits || 2
+    const span = h.span({style: 'margin-right: 1rem'}).of(`${name}=${initial}`).el
+    function tosig(v) {
+      const f = trafo[0]
+      return (f(v) - f(0)) / (f(1) - f(0)) * (max - min) + min
+    }
+    function fromsig(v) {
+      const f = trafo[1]
+      return (f((v - min) / (max - min)) - f(0)) / (f(1) - f(0))
+    }
+    const range = make_range(name, {initial}).change(value => {
+      value = tosig(parseFloat(value))
+      span.textContent = `${name}=${value.toFixed(digits)}`
+      if (network) network.sender({[name]: value})
+    })
+    const el = h.div({style: 'display:flex'}).of(span, range).el
+    let initialized = false
+    if (network) network.listenJson('signals', data => {
+      if (!initialized && data.hasOwnProperty(name)) {
+        const value = fromsig(data[name])
+        range.value = fromsig(value)
+        span.textContent = `${name}=${value.toFixed(digits)}`
+        console.log('range', name, data[name], value)
+        initialized = true
+      }
+    })
+    el.change = range.change
+    el.name = name
+    return el
   }
 
-  const toggle = (name, initial) => {
-    let value = initial || false
-    const button = h.button(initial && '.on').of(name).el
+  const toggle = (name, options) => {
+    options = options || {}
+    const network = options.network
+    const init = options.init
+    const text = options.text || name
+    let value = init || false
+    const button = h.button(init && '.on').of(text).el
     button.name = name
     const update = updater(button, () => value)
-    button.addEventListener('click', () => {
+    const toggle = () => {
+      if (network) return network.sender({[name]: 1 * !value})
       value = !value
       button.classList[value ? 'add' : 'remove']('on')
       update()
+    }
+    button.addEventListener('click', toggle)
+    if (network) network.listenJson('signals', data => {
+      if (data.hasOwnProperty(name)) {
+        value = !!data[name]
+        button.classList[value ? 'add' : 'remove']('on')
+        update()
+      }
     })
     return button
   }
