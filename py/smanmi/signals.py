@@ -58,6 +58,8 @@ class InState(L.Signal):
         pass
 
     def call(self, value, state):
+        if not hasattr(state, 'state'):
+            return 0
         return value * (state.state == self.state)
 
 
@@ -383,8 +385,8 @@ class KinectMovement(L.Signal):
                 cm1 = np.array(cms[:self.avg]).mean(axis=0)
                 cm2 = np.array(cms[self.avg:]).mean(axis=0)
                 dsum += np.linalg.norm(cm1 - cm2)
-                util.printn(self, 20, '', cm1, '\n', cm2, cm1 - cm2, np.linalg.norm(cm1 - cm2))
-        util.printn(self, 20, dsum)
+                # util.printn(self, 20, '', cm1, '\n', cm2, cm1 - cm2, np.linalg.norm(cm1 - cm2))
+        # util.printn(self, 20, dsum)
         return dsum
 
 
