@@ -234,15 +234,19 @@ class SignalAdd(SignalChain):
 
 class Named(Signal):
 
-    def __init__(self, name, default=None):
+    def __init__(self, name, default=None, meta=False):
         # Overwrite so we can specify positional arguments
         super().__init__(name=name)
         self.callkws = set((name,))
         self.wants = set(self.callkws)
         self.default = default
+        self.meta = meta
 
     def call(self, **kw):
-        return kw.get(self.name, self.default)
+        name = self.name
+        if self.meta:
+            name = kw.get(name)
+        return kw.get(name, self.default)
 
 
 class NamedProxy:

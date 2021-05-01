@@ -263,6 +263,14 @@ def print_every(name, msg, dt=5):
     _print_every[name](msg)
 
 
+def printn(self, n, msg):
+    if not hasattr(self, '_printn'):
+        self._printn = 0
+    if self._printn < n:
+        self._printn += 1
+        print(msg)
+
+
 def except_kill(func):
     """Kills the program if any exception is encountered."""
     def wrapper(*args, **kw):

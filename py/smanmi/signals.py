@@ -727,14 +727,13 @@ class MovingAverage(L.Signal):
 
 
 class Exponential(L.SignalLast):
-    """Exponential follower."""
+    """Exponential follower (alpha=1 to disable; .1 is a good value)."""
 
-    def init(self, alpha):
+    def init(self, alpha=1):
         pass
 
     def call(self, t, value):
-        return self.lastout.value + (value - self.lastout.value) * (
-            1 - self.alpha) * (t - self.lastin.t)
+        return self.lastout.value + (value - self.lastout.value) * self.alpha
 
 
 class Median(L.Signal):
