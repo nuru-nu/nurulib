@@ -147,23 +147,34 @@ export const ui = (() => {
     }
   }
 
-  const choice = (name, {values, initial}) => {
+  const choice = (name, options) => {
+    options = options || {}
+    const values = options.values
+    const initial = options.initial
+    const network = options.network
     let value = initial || values[0]
     const disp = h.div('cont', {class: 'flex'}).of(
       values.map(value => h.button(value).of(value))
     ).els
     const update = updater(disp.cont, () => value)
-    function set(value_) {
-       value = value_
+    function updateui() {
       values.map(value => disp[value].classList.remove('on'))
       disp[value].classList.add('on')
       disp.cont.value = value
-    }
-    values.map(value => disp[value].addEventListener('click', () => {
-      set(value)
       update()
+    }
+    values.map(val => disp[val].addEventListener('click', () => {
+      if (network) return network.sender({ [name]: val })
+      value = val
+      updateui()
     }))
-    set(value)
+    if (!network) updateui()
+    if (network) network.listenJson('signals', data => {
+      if (data.hasOwnProperty(name)) {
+        value = data[name]
+        updateui()
+      }
+    })
     disp.cont.name = name
     return disp.cont
   }
@@ -197,7 +208,7 @@ export const ui = (() => {
     const network = options.network
     const min = options.min || 0
     const max = options.max || 1
-    const initial = options.inital || (max - min) / 2
+    const initial = options.initial || (max - min) / 2
     const gamma = options.gamma || 1
     const trafo = options.trafo || [(x => x**gamma), (x => x**(1/gamma))]  // function & inverse
     const digits = options.digits || 2
