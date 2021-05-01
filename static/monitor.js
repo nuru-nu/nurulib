@@ -38,7 +38,10 @@ export const Monitor = (output, { monitor_def }) => {
   addsigs(hidden)
 
   const els = ui.v(
-    h.div().of(ui.toggle('logmel')),
+    ui.h(
+      ui.toggle('logmel'),
+      ui.choice('selected', {values: Object.keys(monitor_def.selected)}),
+    ),
     h.canvas('graph', {width, height}),
     h.div('labels', { style: `width: ${width}px` }),
     h.div('state', { style: 'margin-top: 20px' }),
@@ -52,7 +55,11 @@ export const Monitor = (output, { monitor_def }) => {
       sig => !hidden.has(sig)))
   const lines = Lines(els.labels, graphs_no_hidden)
   els.graph.addEventListener('click', lines.toggle)
-  monitor_def.selected.forEach(lines.set_next_color)
+  els.selected.change(selected => {
+    lines.clear()
+    monitor_def.selected[selected].forEach(lines.set_next_color)
+  })
+  Object.values(monitor_def.selected)[0].forEach(lines.set_next_color)
   lines.toggle()
 
   const ctx = els.graph.getContext('2d')
@@ -255,6 +262,7 @@ function Lines(output, graphs) {
       remove_color(oldest)
     }
     set_color(sig, available.shift())
+    update_summary()
   }
 
   function remove_color(sig) {
@@ -285,14 +293,18 @@ function Lines(output, graphs) {
     return lines[sig] && lines[sig].color
   }
 
+  function update_summary() {
+    u.empty(els.summary)
+    Object.keys(lines).forEach(sig => {
+      h.span().of(sig).into(els.summary).el.style.color = lines[sig].color
+    })
+  }
+
   function toggle() {
     toggled = !toggled
     if (toggled) {
       els.table.style.display = 'none'
-      u.empty(els.summary)
-      Object.keys(lines).forEach(sig => {
-        h.span().of(sig).into(els.summary).el.style.color = lines[sig].color
-      })
+      update_summary()
       els.summary.style.display = 'block'
     } else {
       els.table.style.display = 'block'
@@ -300,9 +312,23 @@ function Lines(output, graphs) {
     }
   }
 
+  function clear() {
+    u.empty(els.summary)
+    Object.keys(graphs).forEach(group =>
+      graphs[group].forEach(sig => {
+        const cb = els[`checkbox_${sig}`]
+        if (cb.checked) {
+          cb.checked = false
+          remove_color(sig)
+        }
+      })
+    )
+  }
+
   return {
     set_next_color,
     get_color,
     toggle,
+    clear,
   }
 }
