@@ -245,10 +245,10 @@ export const ui = (() => {
   const toggle = (name, options) => {
     options = options || {}
     const network = options.network
-    const init = options.init
+    const initial = options.initial
     const text = options.text || name
-    let value = init || false
-    const button = h.button(init && '.on').of(text).el
+    let value = initial || false
+    const button = h.button(initial && '.on').of(text).el
     button.name = name
     const update = updater(button, () => value)
     const toggle = () => {
@@ -366,6 +366,12 @@ export const colors = function() {
     '#c0c0c0', '#808080', '#000080', '#008080', '#008000', '#800080',
     '#808000', '#800000'
   ]
+  // Filtered user_colors.
+  const monitor_colors = [
+    '#00ff00', '#ff0000', '#00ffff', '#ffff00', '#ff00ff',
+    '#c0c0c0', '#008080', '#008000', '#800080',
+    '#808000', '#800000'
+  ]
 
   return {
     hex2,
@@ -376,6 +382,7 @@ export const colors = function() {
     palette2,
     strong_palette,
     user_colors,
+    monitor_colors,
   }
 }()
 
