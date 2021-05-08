@@ -120,6 +120,9 @@ class Signal:
     def __add__(self, other):
         return SignalAdd(self, other)
 
+    def __sub__(self, other):
+        return SignalAdd(self, other, subtract=True)
+
     def __call__(self, **allkw):
         for k, v in self.signalparams.items():
             setattr(self, k, v(**allkw))
@@ -216,13 +219,16 @@ class SignalMult(SignalChain):
 
 class SignalAdd(SignalChain):
 
-    def __init__(self, sig1, sig2):
+    def __init__(self, sig1, sig2, subtract=False):
         super().__init__(sig1, sig2)
         self.wants = set(sig1.wants).union(sig2.wants)
+        self.subtract = subtract
 
     def __call__(self, **kw):
         value1 = self.sig1(**kw)
         value2 = self.sig2(**kw)
+        if self.subtract:
+            return value1 - value2
         return value1 + value2
 
     def __repr__(self):
