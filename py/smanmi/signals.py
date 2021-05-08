@@ -352,6 +352,35 @@ class Saw(L.Signal):
 # kinect
 ###############################################################################
 
+class KinectLike(L.Signal):
+    """ Returns the likes per person """
+
+    def init(self, r_z2, dl_dt):
+        self.likes = {}
+        self.lt = None
+    
+    def call(self, people, t):
+        if not self.lt:
+            self.lt = t
+        dt = t - self.lt
+
+        likes = {}
+        for person in people:
+            like = self.likes.get(str(person['id']), 0)  # Note: JSON has always string keys!
+            d = np.linalg.norm(person['cm'][:2])
+            like += np.clip(self.dl_dt*dt, 0, 3)
+            if d < self.r_z2 and like < 1:
+                like =0
+            likes[str(person['id'])] = like
+
+
+        self.likes = likes
+
+        self.lt = t
+
+        return self.likes
+            
+
 class KinectDistance(L.Signal):
     """Returns array of distances."""
 
