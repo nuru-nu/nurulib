@@ -227,14 +227,18 @@ export const ui = (() => {
       if (network) network.sender({[name]: value})
     })
     const el = h.div({style: 'display:flex'}).of(span, range).el
-    let initialized = false
+    let last_sig
+    let i = 0
     if (network) network.listenJson('signals', data => {
-      if (!initialized && data.hasOwnProperty(name)) {
-        const value = fromsig(data[name])
-        range.value = fromsig(value)
-        span.textContent = `${name}=${value.toFixed(digits)}`
-        console.log('range', name, data[name], value)
-        initialized = true
+      if (data.hasOwnProperty(name)) {
+        const sig = data[name]
+        if (sig === sig && sig !== last_sig) {
+          last_sig = data[name]
+          const value = fromsig(sig)
+          range.value = value
+          span.textContent = `${name}=${value.toFixed(digits)}`
+          console.log('range', i++, last_sig, '->', sig, '<=>', value)
+        }
       }
     })
     el.change = range.change
