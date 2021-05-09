@@ -404,3 +404,44 @@ def print_exc(fun):
             logger.error('uncaught exception : %s', e)
             logger.warning(traceback.format_exc())
     return wrapped
+
+
+def get(d, key):
+    """Returns '.'-nested dict value, or None."""
+    for part in key.split('.'):
+        if not isinstance(d, dict) or part not in d:
+            return
+        d = d[part]
+    return d
+
+
+def update(d, updates, transients=()):
+    """Updates d with `updates`, following `get()` key convention.
+
+    Args:
+      d: Dictionary to be updated. Can be nested, but keys should never contain
+        a ".".
+      updates: Dictionar with updates to be merged into `d`. Can be 
+    """
+    nested = {}
+    for k, v in updates.items():
+        assert not isinstance(v, dict), k
+        if '.' in k:
+            k, *parts = k.split('.')
+            for part in parts[::-1]:
+                v = {part: v}
+        nested[k] = v
+
+    def rek(d, updates, path=()):
+        for k, v in updates.items():
+            if isinstance(v, dict):
+                if not isinstance(d.get(k), dict):
+                    d[k] = {}
+                rek(d[k], v, path + (k,))
+            else:
+                if '.'.join(path + (k,)) in transients:
+                    d[k].extend(v)
+                else:
+                    d[k] = v
+
+    rek(d, nested)
