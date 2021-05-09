@@ -195,9 +195,10 @@ export const Dump = (output, {network}) => {
     els.output.textContent = ''
     if (!shown || !signals) return
     function shorten(x) {
+      if (x === null) return x
       const ret = {}
       for(let [k, v] of Object.entries(x)) {
-        if (v != null && 'object' === typeof v) {
+        if ('object' === typeof v) {
           ret[k] = shorten(v)
         } else {
           if ('number' === typeof v) {
