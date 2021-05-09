@@ -236,7 +236,7 @@ export const ui = (() => {
           last_sig = data[name]
           const value = fromsig(sig)
           range.value = value
-          span.textContent = `${name}=${value.toFixed(digits)}`
+          span.textContent = `${name}=${sig.toFixed(digits)}`
           // console.log('range', i++, last_sig, '->', sig, '<=>', value)
         }
       }
