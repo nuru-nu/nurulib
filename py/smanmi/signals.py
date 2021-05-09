@@ -422,10 +422,17 @@ class KinectMovement(L.Signal):
 class KinectFix(L.Signal):
     """Cleans up Kinect signal."""
 
-    def init(self, phantoms, dphi):
+    def init(self, phantoms, dphi, augment=()):
         ...
 
     def call(self, value):
+        if not value and self.augment:
+            new_person = sorted([
+                    [np.linalg.norm(person['cm']), person]
+                    for i, person in enumerate(self.augment)
+                ])[0][1]
+            value.append(new_person)
+
         def fix(person):
             d = dict(**person)
             x, y, z = d['cm']
@@ -436,6 +443,7 @@ class KinectFix(L.Signal):
             ])
             d['cm'] = [x, y, z]
             return d
+        
         return [
             fix(person)
             for person in value
