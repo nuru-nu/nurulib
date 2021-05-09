@@ -228,7 +228,7 @@ export const ui = (() => {
     })
     const el = h.div({style: 'display:flex'}).of(span, range).el
     let last_sig
-    let i = 0
+    // let i = 0
     if (network) network.listenJson('signals', data => {
       if (data.hasOwnProperty(name)) {
         const sig = data[name]
@@ -237,7 +237,7 @@ export const ui = (() => {
           const value = fromsig(sig)
           range.value = value
           span.textContent = `${name}=${value.toFixed(digits)}`
-          console.log('range', i++, last_sig, '->', sig, '<=>', value)
+          // console.log('range', i++, last_sig, '->', sig, '<=>', value)
         }
       }
     })
