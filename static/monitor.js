@@ -194,12 +194,26 @@ export const Dump = (output, {network}) => {
     }
     els.output.textContent = ''
     if (!shown || !signals) return
+    function shorten(x) {
+      const ret = {}
+      for(let [k, v] of Object.entries(x)) {
+        if (v != null && 'object' === typeof v) {
+          ret[k] = shorten(v)
+        } else {
+          if ('number' === typeof v) {
+            if (v != Math.floor(v)) v = v.toFixed(2)
+          }
+          ret[k] = v
+        }
+      }
+      return ret
+    }
     u.sorted(Object.entries(signals)).map(([k, v]) => {
       if (!matches(k)) return
       if (Array.isArray(v) && v.length && 'number' === typeof v[0]) {
         v = `[${v.map(x => x.toFixed(3)).join(',')}]`
       } else if ('object' === typeof v) {
-        v = JSON.stringify(v)
+        v = JSON.stringify(shorten(v))
       } else if ('number' === typeof v) {
         v = v.toFixed(4)
       }
