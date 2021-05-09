@@ -159,11 +159,11 @@ export const Dump = (output, {network}) => {
 
   els.include.addEventListener('keyup', e => {
     include = e.target.value.split(/\s+/g).filter(x => x !== '')
-    update()
+    update(e.keyCode)
   })
   els.exclude.addEventListener('keyup', e => {
     exclude = e.target.value.split(/\s+/g).filter(x => x !== '')
-    update()
+    update(e.keyCode)
   })
 
   const matches = s => (
@@ -184,7 +184,14 @@ export const Dump = (output, {network}) => {
     update()
   })
 
-  function update() {
+  function update(keyCode) {
+    if (keyCode === 13) {
+      if (!shown) els.dump.click()
+      els.live.click()
+    }
+    if (keyCode === 27) {
+      if (shown) els.dump.click()
+    }
     els.output.textContent = ''
     if (!shown || !signals) return
     u.sorted(Object.entries(signals)).map(([k, v]) => {
