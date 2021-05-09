@@ -476,6 +476,18 @@ class Sonar(L.Signal):
 ###############################################################################
 
 
+class Dt(L.Signal):
+    """Simply keeps delta to last `t`."""
+
+    def init(self):
+        self.lt = 0
+
+    def call(self, t):
+        if not self.lt: self.lt = t
+        dt = t - self.lt
+        self.lt = t
+        return max(0, dt)
+
 class Print(L.Signal):
     """Prints if not none."""
 
