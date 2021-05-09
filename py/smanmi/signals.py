@@ -446,6 +446,21 @@ class KinectFix(L.Signal):
         ]
 
 
+# sensors
+###############################################################################
+
+class Sonar(L.Signal):
+    """Intelligently maps sonar signal to 0..1"""
+
+    def init(self, sig, max_dist=40):
+        self.value = 0
+
+    def call(self):
+        if self.sig:
+            self.value = max(0, min(0, 1 - self.sig / self.max_dist))
+        return self.value
+
+
 # utils
 ###############################################################################
 
