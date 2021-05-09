@@ -449,9 +449,9 @@ class KinectFix(L.Signal):
 
         if not people and self.augment:
             new_person = sorted([
-                    [np.linalg.norm(person['cm']), person]
+                    [np.linalg.norm(person['cm']), i, person]
                     for i, person in enumerate(self.augment)
-                ])[0][1]
+                ])[0][2]
             people.append(new_person)
 
         return people
