@@ -426,12 +426,6 @@ class KinectFix(L.Signal):
         ...
 
     def call(self, value):
-        if not value and self.augment:
-            new_person = sorted([
-                    [np.linalg.norm(person['cm']), person]
-                    for i, person in enumerate(self.augment)
-                ])[0][1]
-            value.append(new_person)
 
         def fix(person):
             d = dict(**person)
@@ -444,7 +438,7 @@ class KinectFix(L.Signal):
             d['cm'] = [x, y, z]
             return d
         
-        return [
+        people = [
             fix(person)
             for person in value
             if not np.any([
@@ -452,6 +446,15 @@ class KinectFix(L.Signal):
                 for phantom in self.phantoms
             ])
         ]
+
+        if not people and self.augment:
+            new_person = sorted([
+                    [np.linalg.norm(person['cm']), person]
+                    for i, person in enumerate(self.augment)
+                ])[0][1]
+            people.append(new_person)
+
+        return people
 
 
 # sensors
