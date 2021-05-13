@@ -263,9 +263,11 @@ function Lines(output, graphs) {
 
   function set_color(sig, color) {
     lines[sig] = {color, t: Date.now()}
-    els[`label_${sig}`].style.backgroundColor = color
-    els[`label_${sig}`].style.color = 'black'
-    els[`checkbox_${sig}`].checked = true
+    if (els.hasOwnProperty[`label_${sig}`]) {
+      els[`label_${sig}`].style.backgroundColor = color
+      els[`label_${sig}`].style.color = 'black'
+      els[`checkbox_${sig}`].checked = true
+    }
   }
 
   function set_next_color(sig) {
@@ -293,8 +295,10 @@ function Lines(output, graphs) {
     }
     available.unshift(lines[sig].color)
     delete lines[sig]
-    els[`label_${sig}`].style = {}
-    els[`checkbox_${sig}`].checked = false
+    if (els.hasOwnProperty[`label_${sig}`]) {
+      els[`label_${sig}`].style = {}
+      els[`checkbox_${sig}`].checked = false
+    }
   }
 
   Object.keys(graphs).forEach(group =>
