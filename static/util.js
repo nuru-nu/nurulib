@@ -35,8 +35,9 @@ export const h = (function() {
     return this
   }
   function into(target) {
+    if (target === null) return this
     if (target.el) {
-      el = target.el
+      target = target.el
     } else if (typeof target === 'string') {
       target = document.querySelector(target)
     }
