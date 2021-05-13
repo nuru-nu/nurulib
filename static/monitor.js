@@ -263,7 +263,7 @@ function Lines(output, graphs) {
 
   function set_color(sig, color) {
     lines[sig] = {color, t: Date.now()}
-    if (els.hasOwnProperty[`label_${sig}`]) {
+    if (els.hasOwnProperty(`label_${sig}`)) {
       els[`label_${sig}`].style.backgroundColor = color
       els[`label_${sig}`].style.color = 'black'
       els[`checkbox_${sig}`].checked = true
@@ -295,7 +295,7 @@ function Lines(output, graphs) {
     }
     available.unshift(lines[sig].color)
     delete lines[sig]
-    if (els.hasOwnProperty[`label_${sig}`]) {
+    if (els.hasOwnProperty(`label_${sig}`)) {
       els[`label_${sig}`].style = {}
       els[`checkbox_${sig}`].checked = false
     }
