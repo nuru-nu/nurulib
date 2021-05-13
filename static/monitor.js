@@ -233,7 +233,7 @@ function Lines(output, graphs) {
     ),
   ).into(output).els
 
-  const palette = colors.strong_palette
+  const palette = colors.monitor_colors
   let available = Array.from(palette)
   let toggled = false
 
@@ -323,6 +323,7 @@ function Lines(output, graphs) {
         }
       })
     )
+    available = Array.from(palette)
   }
 
   return {
