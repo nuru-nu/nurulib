@@ -1,25 +1,22 @@
 import { h } from './util.js'
 
 export const Network = (output, options) => {
-  const record_timestamps = (options || {}).record_timestamps || false
-
-  const host = window.location.hostname
-  const signals_port = 6108
-  const animation_port = 6109
-
+  options = options || {}
+  const record_timestamps = options.record_timestamps || false
+  const secondary = options.secondary || false
   const timestamps = { animation: [], signals: [] }
 
   const socks = {
-    animation: new WebSocket(`ws://${window.location.host}/+animation`),
     signals: new WebSocket(`ws://${window.location.host}/+signals`),
+  }
+  if (!secondary) {
+    socks.animation = new WebSocket(`ws://${window.location.host}/+animation`)
   }
 
   const disp = h.div().of(
     'animation ', h.span('animation').of('connecting'),
     ', signals ', h.span('signals').of('connecting')
   ).into(output).els;
-
-  let animation_listeners = [], signals_listeners = []
 
   Object.keys(socks).forEach(key => {
     let mayberror = ''
@@ -38,20 +35,23 @@ export const Network = (output, options) => {
   let listeners = {}, jsonListeners = new Set()
   Object.keys(socks).forEach(key => listeners[key] = [])
 
-  socks.animation.addEventListener('message', function (e) {
-    if (record_timestamps) {
-      timestamps.animation.push(new Date().getTime())
-    }
-    if (e.data instanceof Blob) {
-      new Response(e.data).arrayBuffer().then(function(data) {
-        let view = new Uint8Array(data)
-        listeners.animation.forEach(listener => listener(view))
-      })
-      return
-    }
-    console.log('unexpected data type', e.data)
-    throw 'unexpected data type'
-  })
+  if (!secondary) {
+    socks.animation.addEventListener('message', function (e) {
+      if (record_timestamps) {
+        timestamps.animation.push(new Date().getTime())
+      }
+      if (e.data instanceof Blob) {
+        new Response(e.data).arrayBuffer().then(function(data) {
+          let view = new Uint8Array(data)
+          listeners.animation.forEach(listener => listener(view))
+        })
+        return
+      }
+      console.log('unexpected data type', e.data)
+      throw 'unexpected data type'
+    })
+  }
+
   let parse_t0 = Date.now()
   socks.signals.addEventListener('message', function (e) {
     if (record_timestamps) {

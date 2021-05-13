@@ -62,10 +62,11 @@ PeriodicCallback = collections.namedtuple(
 class Server:
     """Forwards UDP & periodic output to websockets. Also serves static."""
 
-    def __init__(self, static_dir, logger):
+    def __init__(self, static_dir, logger, index_html='index.html'):
         self.static_dir = static_dir
         self.logger = logger
         self.stats = util.StreamingStats(logger)
+        self.index_html = index_html
         self.stats.catch_ctrlc(self.stop)
         self.udp_forwardings = {}
         self.periodic_callbacks = {}
@@ -145,7 +146,7 @@ class Server:
                 self.logger.warning(traceback.format_exc())
 
     async def index(self, request):
-        return web.FileResponse(os.path.join(self.static_dir, 'index.html'))
+        return web.FileResponse(os.path.join(self.static_dir, self.index_html))
 
     def init_app(self):
         self.app = web.Application()
