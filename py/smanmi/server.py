@@ -141,9 +141,9 @@ class Server:
                         'signals ws closed with exception %s', ws.exception())
                 else:
                     self.logger.debug('msg.type=%s', msg.type)
-        except Exception as e:
-            self.logger.error('uncaught exception : %s', e)
-            self.logger.warning(traceback.format_exc())
+            except Exception as e:
+                self.logger.error('uncaught exception : %s', e)
+                self.logger.warning(traceback.format_exc())
 
     async def index(self, request):
         return web.FileResponse(os.path.join(self.static_dir, self.index_html))
