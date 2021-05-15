@@ -180,13 +180,24 @@ export const ui = (() => {
     return disp.cont
   }
 
-  const dropdown = (name, {values, initial}) => {
-    initial = initial || values[0]
+  const dropdown = (name, options) => {
+    const network = options.network
+    const values = options.values
+    const initial = options.inital || options.values[0]
     const select = h.select().of(
       values.map(value => h.option({value}).of(value))
     ).el
     const update = updater(select, () => select.value)
-    select.addEventListener('change', update)
+    select.change(value => {
+      if (!network) return
+      network.sender({[name]: value})
+    })
+    if (network) network.listenJson('signals', data => {
+      if (data.hasOwnProperty(name)) {
+        select.value = data[name]
+      }
+    })
+    select.addEventListener('input', update)
     select.value = initial
     select.name = name
     return select
