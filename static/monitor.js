@@ -144,6 +144,7 @@ export const Monitor = (output, { monitor_def }) => {
 }
 
 export const Dump = (output, {network}) => {
+  const wraplength = 80
   const els = h.div('cont').of(
     ui.h(
       ui.toggle('dump'),
@@ -194,31 +195,43 @@ export const Dump = (output, {network}) => {
     }
     els.output.textContent = ''
     if (!shown || !signals) return
-    function shorten(x) {
-      if (x === null) return x
-      const ret = {}
-      for(let [k, v] of Object.entries(x)) {
+
+    function dumpobj(x) {
+      if (x === null) return 'null'
+      function dumpv(v) {
         if ('object' === typeof v) {
-          ret[k] = shorten(v)
+          return dumpobj(v)
+        } else if ('number' === typeof v) {
+          if (v != Math.floor(v)) v = v.toFixed(2)
+          return v
         } else {
-          if ('number' === typeof v) {
-            if (v != Math.floor(v)) v = v.toFixed(2)
-          }
-          ret[k] = v
+          return JSON.stringify(v)
         }
       }
-      return ret
+      if (Array.isArray(x)) {
+        return '[' + x.map(dumpv).join(',') + ']'
+      }
+      return '{' + Object.entries(x).map(kv => [kv[0], dumpv(kv[1])].join(':')).join(',') + '}'
     }
+
     u.sorted(Object.entries(signals)).map(([k, v]) => {
       if (!matches(k)) return
       if (Array.isArray(v) && v.length && 'number' === typeof v[0]) {
         v = `[${v.map(x => x.toFixed(3)).join(',')}]`
       } else if ('object' === typeof v) {
-        v = JSON.stringify(shorten(v))
+        v = dumpobj(v)
       } else if ('number' === typeof v) {
         v = v.toFixed(4)
       }
-      els.output.textContent += `${k} = ${v}\n`
+      let prefix = `${k} = `
+      const l = Math.max(10, wraplength - prefix.length)
+      let wrapped = ''
+      while (v.length) {
+        wrapped += prefix + v.slice(0, l) + '\n'
+        v = v.slice(l)
+        prefix = Array(prefix.length).fill(' ').join('')
+      }
+      els.output.textContent += wrapped
     })
   }
 
