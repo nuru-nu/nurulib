@@ -77,6 +77,10 @@ textarea {
   display: none;
 }
 
+.s1 {
+  width: 1rem;
+}
+
 .on {
   color: black;
   background: #0f0;

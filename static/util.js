@@ -214,7 +214,7 @@ export const ui = (() => {
     const trafo = options.trafo || [(x => x**gamma), (x => x**(1/gamma))]  // function & inverse
     const digits = options.digits || 2
     const text = options.hasOwnProperty('text') ? options.text : name
-    const span = h.span({style: 'margin-right: 1rem'}).of().el
+    const span = h.span({style: 'margin-right: 0.2rem'}).of().el
     if (text) span.textContent = `${text}=${initial}`
     function tosig(v) {
       const f = trafo[0]
