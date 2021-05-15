@@ -611,11 +611,14 @@ class From(L.Signal):
 class To(L.Signal):
     """Transforms from 0..1 to `dst`"""
 
-    def init(self, dst_min, dst_max):
+    def init(self, dst_min, dst_max, clip=False):
         pass
 
     def call(self, value):
-        return value * (self.dst_max - self.dst_min) + self.dst_min
+        value = value * (self.dst_max - self.dst_min) + self.dst_min
+        if self.clip:
+            value = np.clip(value, 0, 1)
+        return value
 
 
 class Thr(L.Signal):
