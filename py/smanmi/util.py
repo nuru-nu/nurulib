@@ -48,9 +48,9 @@ class Colorize:
 
 
 def createLogger(name, stderr=True, logfile=True, colored=True, debug=True):  # noqa: N802, E501
-    """Also updates module's `logger` to newly initialized logger."""
+    """Sets root logger & creates `name`.log file."""
     global logger
-    logger = logging.getLogger(name)
+    logger = logging.getLogger('')
     logger.setLevel(logging.DEBUG if debug else logging.INFO)
     formatter = logging.Formatter(FORMAT)
     if stderr:
@@ -404,4 +404,3 @@ def print_exc(fun):
             logger.error('uncaught exception : %s', e)
             logger.warning(traceback.format_exc())
     return wrapped
-
