@@ -213,7 +213,9 @@ export const ui = (() => {
     const gamma = options.gamma || 1
     const trafo = options.trafo || [(x => x**gamma), (x => x**(1/gamma))]  // function & inverse
     const digits = options.digits || 2
-    const span = h.span({style: 'margin-right: 1rem'}).of(`${name}=${initial}`).el
+    const text = options.hasOwnProperty('text') ? options.text : name
+    const span = h.span({style: 'margin-right: 1rem'}).of().el
+    if (text) span.textContent = `${text}=${initial}`
     function tosig(v) {
       const f = trafo[0]
       return (f(v) - f(0)) / (f(1) - f(0)) * (max - min) + min
@@ -224,8 +226,11 @@ export const ui = (() => {
     }
     const range = make_range(name, {initial}).change(value => {
       value = tosig(parseFloat(value))
-      span.textContent = `${name}=${value.toFixed(digits)}`
-      if (network) network.sender({[name]: value})
+      if (network) {
+        network.sender({ [name]: value })
+      } else if (text) {
+        span.textContent = `${text}=${value.toFixed(digits)}`
+      }
     })
     const el = h.div({style: 'display:flex'}).of(span, range).el
     let last_sig
@@ -237,7 +242,9 @@ export const ui = (() => {
           last_sig = data[name]
           const value = fromsig(sig)
           range.value = value
-          span.textContent = `${name}=${sig.toFixed(digits)}`
+          if (text) {
+            span.textContent = `${text}=${sig.toFixed(digits)}`
+          }
           // console.log('range', i++, last_sig, '->', sig, '<=>', value)
         }
       }
