@@ -44,7 +44,6 @@ export const Monitor = (output, { monitor_def }) => {
     ),
     h.canvas('graph', {width, height}),
     h.div('labels', { style: `width: ${width}px` }),
-    h.div('state', { style: 'margin-top: 20px' }),
     h.div().of(groups),
     h.div('unknown', { style: 'margin-top: 20px; color: red' }),
   ).into(output).els
@@ -72,10 +71,6 @@ export const Monitor = (output, { monitor_def }) => {
     if (!running) return
     signals = data
     t++
-    if (signals.state.indexOf('frozen') !== -1) {
-      els.text_sigs.textContent = signals.state
-      return
-    }
     if (Date.now() - gt > grid.ms) {
       gt = Date.now()
       for(let y = grid.dy; y < 1; y += grid.dy) {
@@ -99,11 +94,6 @@ export const Monitor = (output, { monitor_def }) => {
 
     const ys = new Set()
     u.sorted(Object.keys(signals)).forEach(sig => {
-      if (sig === 'state') {
-        els.state.textContent = signals[sig]
-        return
-      }
-
       if (feature_map.hasOwnProperty(sig)) {
         els[feature_map[sig]].textContent = signals[sig]
         return
