@@ -41,12 +41,12 @@ class ActionLatch(L.Signal):
     def call(self, action):
         if self.value is None:
             if self.sig is not None:
-                print(self.regex, 'None', '->', self.sig)
+                # print(self.regex, 'None', '->', self.sig)
                 self.value = self.sig
         if action:
             m = self._regex.match(action)
             if m:
-                print('->', m.group(1))
+                # print('->', m.group(1))
                 self.value = self.converter(m.group(1))
         return self.value
 
