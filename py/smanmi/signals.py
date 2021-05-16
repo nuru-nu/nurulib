@@ -468,7 +468,7 @@ class Sonar(L.Signal):
 
     def call(self):
         if self.sig:
-            self.value = max(0, min(0, 1 - self.sig / self.max_dist))
+            self.value = max(0, min(1, 1 - self.sig / self.max_dist))
         return self.value
 
 
