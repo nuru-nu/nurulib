@@ -419,14 +419,58 @@ class KinectMovement(L.Signal):
         return dsum
 
 
+
+
+
 class KinectFix(L.Signal):
     """Cleans up Kinect signal."""
 
-    def init(self, phantoms, dphi, augment=()):
-        ...
+    def init(self, phantoms, dphi, people_aug=()):
+        self.min_dist = 0.5
+        self.people_proposals = []
+        self.persist_t = 5
+
+    def update_proposals(self, people_aug):
+        for p_aug in people_aug:
+            for p_prop in self.people_proposals:
+                if np.linalg.norm(
+                    np.array(p_prop['cm'][:2]) - np.array(p_aug['cm'][:2])
+                ) < self.min_dist:
+                    p_prop["pres_t"] += 1
+                    p_prop["away_t"] = 0
+                    p_prop["eval"] = True
+                    break
+            else:
+                person = p_aug
+                person["away_t"] = 0
+                person["pres_t"] = 0
+                person["eval"] = True
+                if len(self.people_proposals) == 0:
+                    person["id"] = -1
+                else:
+                    person["id"] = min([p["id"] for p in self.people_proposals]) - 1
+                self.people_proposals.append(person)
+
+        for person in self.people_proposals:
+            if person["eval"] == False:
+                person["away_t"] += 1
+                
+        # Remove where lost tracking
+        self.people_proposals = [
+            person
+            for person in self.people_proposals
+            if person["away_t"] < self.persist_t
+        ]
+
+    def merge_people(self, people):
+        for p_prop in self.people_proposals:
+            if p_prop["pres_t"] > self.persist_t:
+                people.append(p_prop)
+
+        return people
 
     def call(self, value):
-
+        # Rotates from ui slider
         def fix(person):
             d = dict(**person)
             x, y, z = d['cm']
@@ -437,24 +481,45 @@ class KinectFix(L.Signal):
             ])
             d['cm'] = [x, y, z]
             return d
-        
-        people = [
-            fix(person)
-            for person in value
+
+        # Removes doubles
+        def reduce_seg_people(people):
+            red_people = []
+            for person in people:
+                if any([
+                        np.linalg.norm(np.array(person['cm'][:2]) -  np.array(red_person['cm'][:2])) < self.min_dist 
+                        for red_person in red_people
+                        ]):
+                    continue
+                red_people.append(person)
+            return red_people
+
+        people_nite = [
+            fix(p_nite)
+            for p_nite in value
             if not np.any([
-                np.allclose(sorted(person['cm']), sorted(phantom))
+                np.allclose(sorted(p_nite['cm']), sorted(phantom))
                 for phantom in self.phantoms
             ])
         ]
 
-        if not people and self.augment:
-            new_person = sorted([
-                    [np.linalg.norm(person['cm']), i, person]
-                    for i, person in enumerate(self.augment)
-                ])[0][2]
-            people.append(new_person)
+        people_aug = [
+            fix(p_aug) 
+            for p_aug in reduce_seg_people(self.people_aug) 
+            # if not any([
+            #     np.linalg.norm(np.array(p_nite['cm'][:2]) - np.array(p_aug['cm'][:2])) < self.min_dist 
+            #     for p_nite in people_nite
+            # ])
+        ]
 
-        return people
+        return people_aug
+        # self.update_proposals(people_aug)
+
+        # for person in self.people_proposals:
+        #     person['eval'] = False
+
+        # return self.merge_people(people_nite)
+
 
 
 # sensors
