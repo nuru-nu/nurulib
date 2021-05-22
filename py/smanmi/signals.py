@@ -495,11 +495,11 @@ class KinectFix(L.Signal):
             return red_people
 
         # Remove phantoms and apply fix
-        people_nite = [
-            fix(p_nite)
-            for p_nite in value
+        people_orig = [
+            fix(p_orig)
+            for p_orig in value
             if not np.any([
-                np.allclose(sorted(p_nite['cm']), sorted(phantom))
+                np.allclose(sorted(p_orig['cm']), sorted(phantom))
                 for phantom in self.phantoms
             ])
         ]
@@ -507,13 +507,13 @@ class KinectFix(L.Signal):
         # Remove doubles and apply fix
         people_aug = [fix(p_aug) for p_aug in reduce_seg_people(self.people_aug)]
 
-        # Remove nite from aug
+        # Remove orig from aug
         people_aug = [
             p_aug
             for p_aug in people_aug
             if not any([
-                np.linalg.norm(np.array(p_nite['cm'][:2]) - np.array(p_aug['cm'][:2])) < self.min_dist 
-                for p_nite in people_nite
+                np.linalg.norm(np.array(p_orig['cm'][:2]) - np.array(p_aug['cm'][:2])) < self.min_dist 
+                for p_orig in people_orig
             ])
         ]
 
@@ -521,9 +521,8 @@ class KinectFix(L.Signal):
 
         for idx, person in enumerate(self.people_proposals):
             person['eval'] = False
-            person['id'] = 10 + idx
 
-        return self.merge_people(people_nite)
+        return self.merge_people(people_orig)
 
 
 
