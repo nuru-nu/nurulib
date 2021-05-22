@@ -36,7 +36,7 @@ class ActionLatch(L.Signal):
     def init(self, regex, sig=None, converter=lambda x: x):
         self._regex = re.compile(regex)
         self.value = None
-        print('ActionLatch', self.value)
+        # print('ActionLatch', self.value)
 
     def call(self, action):
         if self.value is None:
@@ -419,9 +419,6 @@ class KinectMovement(L.Signal):
         return dsum
 
 
-
-
-
 class KinectFix(L.Signal):
     """Cleans up Kinect signal."""
 
@@ -439,6 +436,7 @@ class KinectFix(L.Signal):
                     p_prop["pres_t"] += 1
                     p_prop["away_t"] = 0
                     p_prop["eval"] = True
+                    p_prop['cm'] = p_aug['cm']
                     break
             else:
                 person = p_aug
@@ -469,7 +467,7 @@ class KinectFix(L.Signal):
 
         return people
 
-    def call(self, value):
+    def call(self, value, kinect_alg):
         # Rotates from ui slider
         def fix(person):
             d = dict(**person)
@@ -503,26 +501,39 @@ class KinectFix(L.Signal):
                 for phantom in self.phantoms
             ])
         ]
+        
+        if kinect_alg == 'nite':
+            return people_orig
 
         # Remove doubles and apply fix
-        people_aug = [fix(p_aug) for p_aug in reduce_seg_people(self.people_aug)]
-
-        # Remove orig from aug
         people_aug = [
-            p_aug
-            for p_aug in people_aug
-            if not any([
-                np.linalg.norm(np.array(p_orig['cm'][:2]) - np.array(p_aug['cm'][:2])) < self.min_dist 
-                for p_orig in people_orig
-            ])
+            fix(p_aug) 
+            for p_aug in reduce_seg_people(self.people_aug) 
+            if p_aug['cm_depth'] != 0
         ]
+        
+        if kinect_alg == 'merged':
+            # Remove orig from aug
+            people_aug = [
+                p_aug
+                for p_aug in people_aug
+                if not any([
+                    np.linalg.norm(np.array(p_orig['cm'][:2]) - np.array(p_aug['cm'][:2])) < self.min_dist 
+                    for p_orig in people_orig
+                ])
+            ]
 
         self.update_proposals(people_aug)
 
         for idx, person in enumerate(self.people_proposals):
             person['eval'] = False
 
-        return self.merge_people(people_orig)
+        if kinect_alg == 'merged':
+            return self.merge_people(people_orig)
+        elif kinect_alg == 'algo':
+            return self.people_proposals
+        else:
+            return []
 
 
 
