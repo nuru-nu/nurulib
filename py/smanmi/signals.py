@@ -449,7 +449,7 @@ class KinectFix(L.Signal):
                     person["id"] = -1
                 else:
                     person["id"] = min([p["id"] for p in self.people_proposals]) - 1
-                self.people_proposals.append(person)
+                self.people_proposals.append(person)            
 
         for person in self.people_proposals:
             if person["eval"] == False:
@@ -494,6 +494,7 @@ class KinectFix(L.Signal):
                 red_people.append(person)
             return red_people
 
+        # Remove phantoms and apply fix
         people_nite = [
             fix(p_nite)
             for p_nite in value
@@ -503,22 +504,26 @@ class KinectFix(L.Signal):
             ])
         ]
 
+        # Remove doubles and apply fix
+        people_aug = [fix(p_aug) for p_aug in reduce_seg_people(self.people_aug)]
+
+        # Remove nite from aug
         people_aug = [
-            fix(p_aug) 
-            for p_aug in reduce_seg_people(self.people_aug) 
-            # if not any([
-            #     np.linalg.norm(np.array(p_nite['cm'][:2]) - np.array(p_aug['cm'][:2])) < self.min_dist 
-            #     for p_nite in people_nite
-            # ])
+            p_aug
+            for p_aug in people_aug
+            if not any([
+                np.linalg.norm(np.array(p_nite['cm'][:2]) - np.array(p_aug['cm'][:2])) < self.min_dist 
+                for p_nite in people_nite
+            ])
         ]
 
-        return people_aug
-        # self.update_proposals(people_aug)
+        self.update_proposals(people_aug)
 
-        # for person in self.people_proposals:
-        #     person['eval'] = False
+        for idx, person in enumerate(self.people_proposals):
+            person['eval'] = False
+            person['id'] = 10 + idx
 
-        # return self.merge_people(people_nite)
+        return self.merge_people(people_nite)
 
 
 
