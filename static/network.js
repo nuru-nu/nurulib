@@ -64,6 +64,7 @@ export const Network = (output, options) => {
         try {
           json = JSON.parse(data)
           Object.assign(last_json, json)
+          if (!last_json._full) return
         } catch (e) {
           if (Date.now() - parse_t0 > 1000) {
             console.error('Could not parse JSON', data)
