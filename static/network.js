@@ -53,6 +53,7 @@ export const Network = (output, options) => {
   }
 
   let parse_t0 = Date.now()
+  let last_json = {}
   socks.signals.addEventListener('message', function (e) {
     if (record_timestamps) {
       timestamps.signals.push(new Date().getTime())
@@ -62,6 +63,7 @@ export const Network = (output, options) => {
         let json
         try {
           json = JSON.parse(data)
+          Object.assign(last_json, json)
         } catch (e) {
           if (Date.now() - parse_t0 > 1000) {
             console.error('Could not parse JSON', data)
@@ -70,7 +72,7 @@ export const Network = (output, options) => {
           return
         }
         listeners.signals.forEach(listener => {
-          listener(jsonListeners.has(listener) ? json : data)
+          listener(jsonListeners.has(listener) ? last_json : data)
         })
       })
       return
