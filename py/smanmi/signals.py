@@ -423,7 +423,7 @@ class KinectFix(L.Signal):
     """Cleans up Kinect signal."""
 
     def init(self, phantoms, dphi, people_aug=()):
-        self.min_dist = 0.5
+        self.min_dist = 0.4
         self.people_proposals = []
         self.persist_t = 5
 
@@ -464,7 +464,6 @@ class KinectFix(L.Signal):
         for p_prop in self.people_proposals:
             if p_prop["pres_t"] > self.persist_t:
                 people.append(p_prop)
-
         return people
 
     def call(self, value, kinect_alg):
@@ -525,11 +524,11 @@ class KinectFix(L.Signal):
 
         self.update_proposals(people_aug)
 
-        for idx, person in enumerate(self.people_proposals):
+        for person in self.people_proposals:
             person['eval'] = False
 
         if kinect_alg == 'merged':
-            return self.merge_people(people_orig)
+            return copy.deepcopy(self.merge_people(people_orig))
         elif kinect_alg == 'algo':
             return self.people_proposals
         else:
