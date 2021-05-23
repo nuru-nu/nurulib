@@ -199,7 +199,8 @@ class Midi:
         if not command:
             self.logger.info('Ignoring message %s', message)
             return
-        self.logger.info('Received %s', command)
+        if not command.name in self.ignore:
+            self.logger.info('Received %s', command)
         for listener in self.listeners:
             listener(command)
 
@@ -245,7 +246,7 @@ def midi2signal(command, logger):
 
 class MidiForwarder:
 
-    def __init__(self, midi, signal_in, signal_out, logger):
+    def __init__(self, midi, signal_in, signal_out, logger, ignore=()):
         self.signal_in_address, self.signal_in_port = signal_in
         self.signal_out_address, self.port = signal_out
         self.logger = logger
@@ -254,6 +255,7 @@ class MidiForwarder:
         self.transport = None
         self.signal2midis = {signal2midi}
         self.midi2signals = {midi2signal}
+        self.ignore = set(ignore)
 
     def start(self):
         loop = asyncio.get_event_loop()
@@ -285,7 +287,8 @@ class MidiForwarder:
         notes = set()
         for signal2midi in self.signal2midis:
             for command in signal2midi(data, self.logger):
-                self.logger.info('Sending %s', command)
+                if not command.name in self.ignore:
+                    self.logger.info('Sending %s', command)
                 if command.kind == 'note' and command.name in notes:
                     # This is a bit hacky but apparently required by Ableton for
                     # events that generate on/off MIDI signals (some instruments
