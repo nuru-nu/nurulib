@@ -139,6 +139,8 @@ class Command:
                 return cls(f'{channel}: {note}{octave} {command}')
             elif bytes[0] >> 4 == 0xA:
                 return cls(f'{channel}: X{bytes[1]}={bytes[2]}')
+            elif bytes == [224, 0, 64]:
+                return None
         raise ValueError(f'Cannot parse MIDI bytes : {bytes}')
 
 
