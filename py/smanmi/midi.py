@@ -31,6 +31,7 @@ import asyncio
 import collections
 import functools
 import re
+import time
 import traceback
 from typing import Sequence
 
@@ -281,10 +282,18 @@ class MidiForwarder:
     def datagram_received(self, data):
         data = util.deserialize(data)
         # print('data', type(data), data)
+        notes = set()
         for signal2midi in self.signal2midis:
             for command in signal2midi(data, self.logger):
                 self.logger.info('Sending %s', command)
+                if command.kind == 'note' and command.name in notes:
+                    # This is a bit hacky but apparently required by Ableton for
+                    # events that generate on/off MIDI signals (some instruments
+                    # simply ignore the note if no delay between on&off).
+                    time.sleep(.1)
                 self.midi.send(command)
+                if command.kind == 'note':
+                    notes.add(command.name)
 
     def got_midi(self, command):
         for midi2signal in self.midi2signals:
