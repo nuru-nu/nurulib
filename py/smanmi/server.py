@@ -49,7 +49,7 @@ class UdpForwarding:
         self.out_udp = out_udp
         self.in_callback = self.out_callback = None
 
-    def with_callbacks(self, in_callback, out_callback=None):
+    def set_callbacks(self, in_callback, out_callback=None):
         self.in_callback = in_callback
         self.out_callback = out_callback
         return self
@@ -194,7 +194,7 @@ class Server:
         udp_forwarding = self.udp_forwardings[websocket_path]
         if udp_forwarding.in_callback:
             self.call_create_task(udp_forwarding.in_callback, data)
-        for ws in self.websockets[websocket_path]:
+        for ws in self.websockets.get(websocket_path, []):
             asyncio.ensure_future(self.safe_send_bytes(
                 websocket_path, ws, data))
 
@@ -212,7 +212,8 @@ class Server:
                     'periodic_{}'.format(periodic_callback.websocket_path),
                     data)
                 try:
-                    for ws in self.websockets[periodic_callback.websocket_path]:
+                    for ws in self.websockets.get(
+                        periodic_callback.websocket_path, []):
                         await self.safe_send_bytes(
                             periodic_callback.websocket_path, ws, data)
                 except RuntimeError as e:
@@ -230,15 +231,14 @@ class Server:
         self.logger.error('caught exception: %s', msg)
 
     def run(self, udp_address='127.0.0.1', address='localhost', port=8080):
-        self.init_app()
 
         loop = asyncio.get_event_loop()
         loop.set_debug(True)
         loop.set_exception_handler(self.exception_handler)
 
-        loop.run_until_complete(self.start(address, port))
-
         #? status websocket
+
+        self.init_app()
 
         for websocket_path, udp_forwarding in self.udp_forwardings.items():
             loop.run_until_complete(loop.create_datagram_endpoint(
@@ -260,7 +260,10 @@ class Server:
             periodic_tasks[websocket_path] = loop.create_task(
                 self.periodic_loop(self.periodic_callbacks[websocket_path]))
 
-        self.logger.info('started server on http://%s:%d', address, port)
+        if port:
+            loop.run_until_complete(self.start(address, port))
+            self.logger.info('started server on http://%s:%d', address, port)
+
         try:
             loop.run_forever()
         except KeyboardInterrupt:
