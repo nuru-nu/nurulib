@@ -147,7 +147,7 @@ class Command:
 
 class Midi:
 
-    def __init__(self, logger, echo=False):
+    def __init__(self, logger, echo=False, ignore=()):
         """Initializes MIDI connection.
 
         Args:
@@ -156,6 +156,7 @@ class Midi:
         """
         self.logger = logger
         self.echo = echo
+        self.ignore = ignore
         self.sent = set()
         self.listeners = set()
 
