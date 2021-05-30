@@ -528,7 +528,7 @@ class KinectFix(L.Signal):
             person['eval'] = False
 
         if kinect_alg == 'merged':
-            return copy.deepcopy(self.merge_people(people_orig))
+            return self.merge_people(people_orig)
         elif kinect_alg == 'algo':
             return self.people_proposals
         else:
