@@ -389,6 +389,9 @@ export const colors = function() {
     '#c0c0c0', '#808080', '#000080', '#008080', '#008000', '#800080',
     '#808000', '#800000'
   ]
+  const user_colors_bright = [
+    '#00ff00', '#00ffff', '#ffff00', '#ff00ff', '#c0c0c0', '#808080', 
+  ]
   // Filtered user_colors.
   const monitor_colors = [
     '#00ff00', '#ff0000', '#00ffff', '#ffff00', '#ff00ff',
@@ -405,6 +408,7 @@ export const colors = function() {
     palette2,
     strong_palette,
     user_colors,
+    user_colors_bright,
     monitor_colors,
   }
 }()
