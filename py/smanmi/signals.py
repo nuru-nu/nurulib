@@ -11,6 +11,7 @@ from scipy import stats
 
 from . import logic as L
 from . import util
+import time
 
 # pylint: disable=no-member
 
@@ -391,6 +392,32 @@ class KinectDistance(L.Signal):
             if 'cm' in p
         ]
 
+class ConnectionMeter(L.Signal):
+    def init(self, decay_rate, acceptance_rate):
+        self.connection_val = 0
+        # self.decay_rate = decay_rate
+        # self.acceptance_rate = acceptance_rate
+        self.prev_t = time.time()
+
+    def call(self, people):
+
+        dt_s = time.time() - self.prev_t
+
+        distances_m = [
+            (p['cm'][0] ** 2 + p['cm'][1] ** 2) ** .5
+            for p in people
+            if 'cm' in p
+        ]
+
+        self.connection_val += self.acceptance_rate * sum(distances_m) * dt_s
+        if len(distances_m) == 0:
+            self.connection_val -= self.decay_rate * dt_s
+
+        self.connection_val = np.clip(self.connection_val, 0, 1)
+
+        self.prev_t = time.time()
+
+        return self.connection_val
 
 class KinectMovement(L.Signal):
     """Quantifies overall movement."""
