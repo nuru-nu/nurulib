@@ -527,7 +527,14 @@ class KinectFix(L.Signal):
                 for phantom in self.phantoms
             ])
         ]
-        
+
+        if kinect_alg == 'yolo':
+            fixed_people = [
+                fix(p_orig)
+                for p_orig in value
+            ]
+            return fixed_people
+
         if kinect_alg == 'nite':
             return people_orig
 
