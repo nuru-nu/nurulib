@@ -35,7 +35,7 @@ import time
 import traceback
 from typing import Sequence
 
-# import rtmidi_python as rtmidi
+import rtmidi_python as rtmidi
 
 from . import util
 
@@ -160,33 +160,33 @@ class Midi:
         self.sent = set()
         self.listeners = set()
 
-        # midi = rtmidi.MidiOut(b'smanmi')
-        # self.midi_outs = []
-        # for port, name in enumerate(midi.ports):
-        #     midi_out = rtmidi.MidiOut(b'smanmi')
-        #     midi_out.open_port(port)
-        #     self.midi_outs.append(midi_out)
-        #     logger.info(
-        #         'MIDI output port #%d : "%s"', port, name.decode('ascii'))
-        # assert self.midi_outs, 'No output ports, check module pydoc!'
-        # if len(self.midi_outs) > 1:
-        #     logger.warning('Sending MIDI signals to >1 output ports!')
+        midi = rtmidi.MidiOut(b'smanmi')
+        self.midi_outs = []
+        for port, name in enumerate(midi.ports):
+            midi_out = rtmidi.MidiOut(b'smanmi')
+            midi_out.open_port(port)
+            self.midi_outs.append(midi_out)
+            logger.info(
+                'MIDI output port #%d : "%s"', port, name.decode('ascii'))
+        assert self.midi_outs, 'No output ports, check module pydoc!'
+        if len(self.midi_outs) > 1:
+            logger.warning('Sending MIDI signals to >1 output ports!')
 
-        # midi = rtmidi.MidiIn(b'smanmi')
-        # self.midi_ins = []
-        # for port, name in enumerate(midi.ports):
-        #     midi_in = rtmidi.MidiIn(b'smanmi')
-        #     midi_in.callback = functools.partial(self.callback, port)
-        #     midi_in.open_port(port)
-        #     self.midi_ins.append(midi_in)
-        #     logger.info(
-        #         'MIDI input port #%d : "%s"', port, name.decode('ascii'))
-        # assert self.midi_ins, 'No input ports, check module pydoc!'
+        midi = rtmidi.MidiIn(b'smanmi')
+        self.midi_ins = []
+        for port, name in enumerate(midi.ports):
+            midi_in = rtmidi.MidiIn(b'smanmi')
+            midi_in.callback = functools.partial(self.callback, port)
+            midi_in.open_port(port)
+            self.midi_ins.append(midi_in)
+            logger.info(
+                'MIDI input port #%d : "%s"', port, name.decode('ascii'))
+        assert self.midi_ins, 'No input ports, check module pydoc!'
 
     def send(self, command: Command):
         self.sent.add(command)
-        # for midi_out in self.midi_outs:
-        #     midi_out.send_message(command.bytes)
+        for midi_out in self.midi_outs:
+            midi_out.send_message(command.bytes)
 
     def callback(self, port, message, timestamp):
         if message[0] == 176:
