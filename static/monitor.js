@@ -134,7 +134,7 @@ export const Monitor = (output, { monitor_def }) => {
 }
 
 export const Dump = (output, {network}) => {
-  const wraplength = 80
+  const wraplength = 150
   const els = h.div('cont').of(
     ui.h(
       ui.toggle('dump'),
