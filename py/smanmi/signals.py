@@ -582,6 +582,18 @@ class Sonar(L.Signal):
 ###############################################################################
 
 
+class FallingEdgePulse(L.Signal):
+    """Creates a pulse on a falling edge"""
+
+    def init(self):
+        self.prev_value = 0
+
+    def call(self, value):
+        pulse = 1 if value < self.prev_value else 0
+        self.prev_value = value
+        return pulse
+
+
 class Dt(L.Signal):
     """Simply keeps delta to last `t`."""
 
@@ -726,6 +738,14 @@ class To(L.Signal):
             value = np.clip(value, 0, 1)
         return value
 
+class Round(L.Signal):
+    """Rounds scalar value"""
+
+    def init(self, decimals):
+        pass
+
+    def call(self, value):
+        return np.round([value], self.decimals)[0]
 
 class Thr(L.Signal):
     """Returns 1-signal if above threshold."""
@@ -773,6 +793,11 @@ class Norm(L.Signal):
         m = value.max()
         return value / m if m else value
 
+class Abs(L.Signal):
+    """Absolute value of signal."""
+
+    def call(self, value):
+        return np.abs(value)
 
 class Mod(L.Signal):
     """Returns the value module some base."""
@@ -851,6 +876,26 @@ class F(L.Signal):
 
 # value transformation in time
 ###############################################################################
+
+class Reciprocal(L.Signal):
+    """1/value"""
+
+    def call(self, value):
+        return 1 / value
+
+
+class DvDt(L.Signal):
+    """dV/dT of signal."""
+
+    def init(self):
+        self.prev_t = self.prev_value = 0
+
+    def call(self, value, t):
+        dv_dt = (value - self.prev_value) / (t - self.prev_t)
+        self.prev_t = t
+        self.prev_value = value
+
+        return dv_dt
 
 class Int(L.Signal):
     """Integrates the signal."""
