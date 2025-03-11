@@ -6,7 +6,7 @@ mypy
 numpy
 pandas
 pytest
-rtmidi_python
+python-rtmidi
 scipy
 serial
 #tensorflow==2.1.0
