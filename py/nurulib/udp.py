@@ -2,8 +2,8 @@
 
 Usage:
 
-python -m smanmi.udp --record_port=1234 --file=data.ndjson
-python -m smanmi.udp --playback_port=1234 --file=data.ndjson
+python -m nurulib.udp --record_port=1234 --file=data.ndjson
+python -m nurulib.udp --playback_port=1234 --file=data.ndjson
 """
 
 import argparse

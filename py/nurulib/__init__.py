@@ -1,4 +1,4 @@
-"""Smoke'n'mirrors utility library.
+"""Nuru utility library.
 
 This package provides some common pattern to be reused in different interactive
 installation projects.

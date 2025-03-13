@@ -5,10 +5,10 @@ submodule.
 
 Setting up a new project:
 
-- link `py/smanmi` into `PYTHONPATH`
+- link `py/nurulib` into `PYTHONPATH`
 - write a number of sensors
-- use `smanmi.integrator.Integrator`
-- use `smanmi.server.Server`
+- use `nurulib.integrator.Integrator`
+- use `nurulib.server.Server`
 - create `launch.sh`
 - do not forget about `tools/`
 - ... refactor new functions from the project into this library ...

@@ -1,7 +1,7 @@
 """Hot plugs Python code into interactive environment / running scripts.
 
 Synopsis:
-    from smanmi import hotplug
+    from nurulib import hotplug
 
     # As would be used for `importlib.import_module()`.
     module = hotplug.HotPlug('.hotplug.module')

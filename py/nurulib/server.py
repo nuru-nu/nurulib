@@ -11,7 +11,7 @@ import weakref
 
 from aiohttp import web, WSMsgType, WSCloseCode
 
-from smanmi import util
+from nurulib import util
 
 
 class ServerUdpProtocol(asyncio.DatagramProtocol):
@@ -164,7 +164,7 @@ class Server:
                 functools.partial(self.websocket_handler, websocket_path)))
         static_path = os.path.join(
             os.path.dirname(__file__), '..', '..', 'static')
-        self.routes.append(web.static('/smanmi', static_path, name='smanmi'))
+        self.routes.append(web.static('/nurulib', static_path, name='nurulib'))
         self.routes.append(web.static('/', self.static_dir, name='static'))
         self.app.add_routes(self.routes)
         self.runner = web.AppRunner(self.app)

@@ -6,21 +6,21 @@ Note on OS X (tested on 10.14.6):
 2. Menu : Window -> Show MIDI Studio
 3. Double click on 'IAC Driver'
 4. Enable 'Device is Online' with ports 'Bus 1'
-5. List MIDI ports by starting program `python -m smanmi.midi`
+5. List MIDI ports by starting program `python -m nurulib.midi`
 
 Note on Ableton Live:
 
 1. Settings : Link MIDI : MIDI Port 'Input: IAC Driver (Bus 1)' enable 'Remote'
 2. Click on 'MIDI' (top right button)
 3. Agitate UI element to connect
-4. Run `python -m smanmi.midi --send='0: C2 on'
-       `python -m smanmi.midi --send='0: C2 off'
+4. Run `python -m nurulib.midi --send='0: C2 on'
+       `python -m nurulib.midi --send='0: C2 off'
 5. Settings : Link MIDI : Midi Port 'Output: IAC Driver (Bus 1)' enable 'Track'
    then instruments can be redirected to 'MIDI To'
 
 Note on testing the setup:
 
-1. `python -m smanmi.midi --signal_in_port=7000`
+1. `python -m nurulib.midi --signal_in_port=7000`
 2. `echo '{"midi": "0: C2 On"}' | nc -u 127.0.0.2 7000
 """
 
