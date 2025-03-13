@@ -1,4 +1,4 @@
-# Smoke And Mirrors
+# NURU Library
 
 Common code shared between different projects. To be linked as a git
 submodule.
@@ -13,7 +13,3 @@ Setting up a new project:
 - do not forget about `tools/`
 - ... refactor new functions from the project into this library ...
 
-Example projects
-
-- `git clone rizhom@figur.li:rizhom.git`
-- `git clone mgcs@figur.li:rizhom.git`
